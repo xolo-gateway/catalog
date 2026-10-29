@@ -36,6 +36,12 @@ jobs:
       - name: Propose the changes
         uses: peter-evans/create-pull-request@v7
         with:
+          # A dedicated token rather than the workflow's own: the
+          # organization does not let GitHub Actions open pull requests,
+          # and a pull request opened with GITHUB_TOKEN would not run the
+          # validation workflow either. Fine-grained, this repository only:
+          # Contents and Pull requests, read and write.
+          token: ${{ secrets.CATALOG_BOT_TOKEN }}
           branch: refresh/daily
           delete-branch: true
           commit-message: "data: refresh from the providers' published data"
