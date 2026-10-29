@@ -126,6 +126,12 @@ def compare_providers(before, after, reasons):
                 nc = new_constraints[label]
                 if (oc.get("duration"), oc.get("scope"), oc.get("kind")) != (nc.get("duration"), nc.get("scope"), nc.get("kind")):
                     reasons.append(f"{path}: plan {plan_id} {label} window changes")
+                for kind in ("value_budget", "token_budget", "max_concurrent"):
+                    bv, av = oc.get(kind), nc.get(kind)
+                    if (bv is None) != (av is None):
+                        reasons.append(f"{path}: plan {plan_id} {label} {kind} turns {'limited' if bv is None else 'unlimited'}")
+                    elif bv is not None and relative(bv, av) > MAX_BUDGET_CHANGE:
+                        reasons.append(f"{path}: plan {plan_id} {label} {kind} moves by {relative(bv, av):.0%}")
                 ob, nb = oc.get("model_budgets") or {}, nc.get("model_budgets") or {}
                 for model_id in sorted(set(ob) - set(nb)):
                     reasons.append(f"{path}: plan {plan_id} {label} loses the budget of {model_id}")

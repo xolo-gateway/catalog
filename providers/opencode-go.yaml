@@ -12,7 +12,8 @@ plans:
   - kind: rolling_window
     label: 5h
     duration: 5h
-    scope: model
+    scope: shared
+    value_budget: 3.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 12.0
@@ -75,7 +76,8 @@ plans:
   - kind: rolling_window
     label: weekly
     duration: 168h
-    scope: model
+    scope: shared
+    value_budget: 7.5
     model_budgets:
       glm-5.3-flash:
         value_budget: 30.0
@@ -138,7 +140,8 @@ plans:
   - kind: rolling_window
     label: monthly
     duration: 720h
-    scope: model
+    scope: shared
+    value_budget: 15.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 60.0
@@ -204,16 +207,19 @@ plans:
   status: published
   source: https://opencode.ai/docs/go/
   date: '2026-10-29'
-  note: The 5-hour, weekly and monthly budgets are 20%, 50% and 100% of each model's published monthly
-    limit. The page does not say whether the windows slide or reset on a schedule, and "monthly" is approximated
-    as 720 hours. A model listed with no budget is free for a limited time.
+  note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
+    published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
+    plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
+    or reset on a schedule, and "monthly" is approximated as 720 hours. A model listed with no budget
+    is free for a limited time.'
 - id: go-plus
   name: Go Plus
   constraints:
   - kind: rolling_window
     label: 5h
     duration: 5h
-    scope: model
+    scope: shared
+    value_budget: 12.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 36.0
@@ -276,7 +282,8 @@ plans:
   - kind: rolling_window
     label: weekly
     duration: 168h
-    scope: model
+    scope: shared
+    value_budget: 30.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 90.0
@@ -339,7 +346,8 @@ plans:
   - kind: rolling_window
     label: monthly
     duration: 720h
-    scope: model
+    scope: shared
+    value_budget: 60.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 180.0
@@ -405,16 +413,19 @@ plans:
   status: published
   source: https://opencode.ai/docs/go/
   date: '2026-10-29'
-  note: The 5-hour, weekly and monthly budgets are 20%, 50% and 100% of each model's published monthly
-    limit. The page does not say whether the windows slide or reset on a schedule, and "monthly" is approximated
-    as 720 hours. A model listed with no budget is free for a limited time.
+  note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
+    published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
+    plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
+    or reset on a schedule, and "monthly" is approximated as 720 hours. A model listed with no budget
+    is free for a limited time.'
 - id: go-teams
   name: Go Teams
   constraints:
   - kind: rolling_window
     label: 5h
     duration: 5h
-    scope: model
+    scope: shared
+    value_budget: 4.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 13.0
@@ -477,7 +488,8 @@ plans:
   - kind: rolling_window
     label: weekly
     duration: 168h
-    scope: model
+    scope: shared
+    value_budget: 10.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 32.5
@@ -540,7 +552,8 @@ plans:
   - kind: rolling_window
     label: monthly
     duration: 720h
-    scope: model
+    scope: shared
+    value_budget: 20.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 65.0
@@ -606,9 +619,11 @@ plans:
   status: published
   source: https://opencode.ai/docs/go/
   date: '2026-10-29'
-  note: The 5-hour, weekly and monthly budgets are 20%, 50% and 100% of each model's published monthly
-    limit. The page does not say whether the windows slide or reset on a schedule, and "monthly" is approximated
-    as 720 hours. A model listed with no budget is free for a limited time.
+  note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
+    published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
+    plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
+    or reset on a schedule, and "monthly" is approximated as 720 hours. A model listed with no budget
+    is free for a limited time.'
 offerings:
 - model: beam
   model_id: beam-free
@@ -694,9 +709,9 @@ offerings:
   api_type: gemini
   base_url: https://opencode.ai/inference/go/google/v1beta
   prices:
-    input: 4.0
-    output: 20.0
-    cached_input: 0.2
+    input: 2.0
+    output: 10.0
+    cached_input: 0.1
     status: published
     source: https://opencode.ai/docs/go/
     date: '2026-10-29'

@@ -117,9 +117,20 @@ def validate(max_age_days):
             offered.add(offering.get("model_id"))
         for plan in doc.get("plans") or []:
             for c in plan.get("constraints") or []:
-                for model_id in c.get("model_budgets") or {}:
+                where = f"{path.relative_to(ROOT)}: plan {plan.get('id')!r} {c.get('label')!r}"
+                for model_id, budget in (c.get("model_budgets") or {}).items():
                     if model_id not in offered:
-                        errors.append(f"{path.relative_to(ROOT)}: plan {plan.get('id')!r}: budget for {model_id!r}, which is not offered")
+                        errors.append(f"{where}: budget for {model_id!r}, which is not offered")
+                    if c.get("scope") == "shared":
+                        # A shared window divides by each model's budget and
+                        # only weighs the kinds it limits itself.
+                        for kind in ("token_budget", "value_budget"):
+                            if (budget or {}).get(kind) == 0:
+                                errors.append(f"{where}: {model_id!r} has a zero {kind}, which a shared window cannot weigh")
+                            if (budget or {}).get(kind) is not None and c.get(kind) is None:
+                                errors.append(f"{where}: {model_id!r} has a {kind} the shared window does not limit")
+                if c.get("model_budgets") and c.get("scope") not in ("model", "shared"):
+                    errors.append(f"{where}: model budgets on a window counted neither per model nor shared")
 
     today = datetime.date.today()
     for path, doc in {**models, **providers}.items():

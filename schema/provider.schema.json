@@ -365,8 +365,10 @@
         "scope": {
           "enum": [
             "provider",
-            "model"
-          ]
+            "model",
+            "shared"
+          ],
+          "description": "provider: one budget for every model; model: a budget and a window per model; shared: one window for every model, each model weighted by its own budget (model_budgets), so that spending a model's whole budget fills the window."
         },
         "token_budget": {
           "type": "integer",

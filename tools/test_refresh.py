@@ -51,6 +51,12 @@ class OpenCodeGoTest(CatalogCopy):
         offerings = {o["model_id"]: o for o in p["offerings"]}
         self.assertEqual(len(offerings), 30)
         self.assertEqual([plan["id"] for plan in p["plans"]], ["go", "go-plus", "go-teams"])
+        # One window per period, shared by every model, each weighing by its
+        # own limit; the window holds the plan's most common limit.
+        five_hours = p["plans"][0]["constraints"][0]
+        self.assertEqual((five_hours["scope"], five_hours["label"]), ("shared", "5h"))
+        limits = [b["value_budget"] for b in five_hours["model_budgets"].values() if b]
+        self.assertEqual(five_hours["value_budget"], max(limits, key=lambda v: (limits.count(v), v)))
 
         deepseek = offerings["deepseek-v4.1-flash"]["prices"]
         self.assertEqual((deepseek["input"], deepseek["output"]), (0.15, 0.6))
@@ -167,3 +173,64 @@ class GuardTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MistralTest(CatalogCopy):
+    def card(self, slug):
+        import gzip
+        return gzip.decompress((FIXTURES / "mistral" / f"{slug}.html.gz").read_bytes()).decode("utf-8")
+
+    def pages(self, **overrides):
+        """Every card the index lists reads as the retired one, but those the
+        test gives."""
+        # Any card carries the navigation; the medium one is the index URL
+        # itself, so another stands for it here.
+        index = self.card("mistral-large-4-0")
+        retired = self.card("codestral-25-01")
+        known = {s: self.card(s) for s in ("mistral-medium-3-5-26-04", "mistral-large-4-0", "mistral-embed-23-12",
+                                           "devstral-2-25-12", "ocr-4-1", "shieldstral-1-0")}
+        known.update(overrides)
+
+        class Pages(dict):
+            def __missing__(self, url):
+                slug = url.rsplit("/", 1)[-1]
+                return known.get(slug, retired)
+
+        return Pages(), index
+
+    def setUp(self):
+        super().setUp()
+        self.saved_floor = refresh.MISTRAL_MIN_PRICED
+        refresh.MISTRAL_MIN_PRICED = 3
+
+    def tearDown(self):
+        refresh.MISTRAL_MIN_PRICED = self.saved_floor
+        super().tearDown()
+
+    def test_reads_the_priced_cards_and_leaves_out_the_others(self):
+        pages, index = self.pages()
+        refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
+        offers = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
+        self.assertEqual(sorted(offers), ["mistral-embed-2312", "mistral-large-4", "mistral-medium-3-5"])
+
+        medium = offers["mistral-medium-3-5"]
+        self.assertEqual((medium["prices"]["input"], medium["prices"]["output"]), (1.5, 7.5))
+        self.assertEqual(medium["context_window"]["value"], 262144)
+        # Labelled entries: the cached price is read apart.
+        self.assertEqual(offers["mistral-large-4"]["prices"]["cached_input"], 0.07)
+        # Embeddings: priced on input only, typed as such.
+        self.assertEqual(offers["mistral-embed-2312"]["prices"]["output"], 0.0)
+        embed = catalog.load_yaml(self.root / "models" / "mistral-embed-2312.yaml")
+        self.assertEqual(embed["kind"], "embeddings")
+
+    def test_refuses_an_unreadable_price(self):
+        page = self.card("mistral-medium-3-5-26-04").replace('\\"price\\":1.5', '\\"price\\":\\"cheap\\"', 1)
+        pages, index = self.pages(**{"mistral-medium-3-5-26-04": page})
+        with self.assertRaises(refresh.ParseError):
+            refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
+
+    def test_refuses_a_shrunken_list(self):
+        refresh.MISTRAL_MIN_PRICED = 10
+        pages, index = self.pages()
+        with self.assertRaises(refresh.ParseError):
+            refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
