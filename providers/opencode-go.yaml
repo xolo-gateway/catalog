@@ -694,9 +694,9 @@ offerings:
   api_type: gemini
   base_url: https://opencode.ai/inference/go/google/v1beta
   prices:
-    input: 4.0
-    output: 20.0
-    cached_input: 0.2
+    input: 2.0
+    output: 10.0
+    cached_input: 0.1
     status: published
     source: https://opencode.ai/docs/go/
     date: '2026-10-29'
