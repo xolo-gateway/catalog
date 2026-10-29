@@ -109,6 +109,9 @@ def validate(max_age_days):
         for i, offering in enumerate(doc.get("offerings") or []):
             if offering.get("model") not in model_ids:
                 errors.append(f"{path.relative_to(ROOT)}: offerings[{i}]: unknown model {offering.get('model')!r}")
+            api_type = offering.get("api_type")
+            if api_type and api_type != (doc.get("xolo") or {}).get("type") and not offering.get("base_url"):
+                errors.append(f"{path.relative_to(ROOT)}: offerings[{i}]: api_type {api_type!r} differs from the provider's and needs its base_url")
             if offering.get("model_id") in offered:
                 errors.append(f"{path.relative_to(ROOT)}: offerings[{i}]: model_id {offering.get('model_id')!r} is listed twice")
             offered.add(offering.get("model_id"))
