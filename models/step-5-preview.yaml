@@ -1,0 +1,40 @@
+id: step-5-preview
+name: Step 5 Preview
+family: step-5
+vendor: StepFun
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/stepfun-ai/Step-5-Preview-BF16
+  date: '2026-10-29'
+  note: 'Card: ''Up to 1M tokens''; binary reading assumed. One third-party listing gives 1,024,000.'
+output_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/stepfun-ai/Step-5-Preview-BF16
+  date: '2026-10-29'
+  note: 'Card: maximum output ''Up to 1M tokens''. Third-party API listings report 64K-65,536 on StepFun''s
+    hosted preview; not confirmed on a StepFun page.'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/stepfun-ai/Step-5-Preview-BF16
+  date: '2026-10-29'
+  note: Text and image input (intro also mentions video); tool-call and reasoning parsers in the serving
+    commands. StepFun Model License 1.0.
+params:
+  total:
+    value: 600000000000
+    status: published
+    source: https://huggingface.co/stepfun-ai/Step-5-Preview-BF16
+    date: '2026-10-29'
+    note: Card says 600B; safetensors metadata 604B.
+  active:
+    value: 27000000000
+    status: published
+    source: https://huggingface.co/stepfun-ai/Step-5-Preview-BF16
+    date: '2026-10-29'

@@ -1,0 +1,44 @@
+id: qwen3.8-flash
+name: Qwen3.8 Flash
+family: qwen3.8
+vendor: Alibaba (Qwen)
+open_weights: true
+context_window:
+  value: 1000000
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-flash
+  date: '2026-10-29'
+  note: 'Qwen Cloud model page displays ''1M'' context and ''131K'' max output (thinking and non-thinking),
+    max reasoning 262K; 131K read as 131,072 and 1M as 1,000,000 (display rounding). HF card of Qwen3.8-Flash-Next:
+    262,144 native, extensible to 1,000,000.'
+output_window:
+  value: 131072
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-flash
+  date: '2026-10-29'
+  note: Qwen Cloud model page displays '1M' context and '131K' max output (thinking and non-thinking),
+    max reasoning 262K; 131K read as 131,072 and 1M as 1,000,000 (display rounding).
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-flash
+  date: '2026-10-29'
+  note: 'Qwen Cloud: image, text and video input, function calling, thinking mode (Flash-Next also supports
+    non-thinking).'
+params:
+  total:
+    value: 125000000000
+    status: published
+    source: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+    date: '2026-10-29'
+    note: 'Card: Qwen3.8-Flash ''is the official version based on Qwen3.8-Flash-Next''; ''125B with 6B
+      activated, plus 51B n-gram embedding and 4B MTP'' (about 180B if n-gram embeddings and MTP are counted,
+      hence the 180B figure in some press).'
+  active:
+    value: 6000000000
+    status: published
+    source: https://huggingface.co/Qwen/Qwen3.8-Flash-Next
+    date: '2026-10-29'

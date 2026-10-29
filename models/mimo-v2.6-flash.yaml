@@ -1,0 +1,41 @@
+id: mimo-v2.6-flash
+name: MiMo-V2.6-Flash
+family: mimo-v2.6
+vendor: Xiaomi
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Flash-RL
+  date: '2026-10-29'
+  note: 'Card: ''Context Length: 1M tokens''; binary reading assumed.'
+output_window:
+  value: 131072
+  status: estimated
+  source: https://www.getmaxim.ai/bifrost/llm-cost-calculator/provider/xiaomi_mimo/model/mimo-v2.6-flash
+  date: '2026-10-29'
+  note: No Xiaomi page found stating max output; several provider/aggregator listings of Xiaomi's API
+    agree on 131,072.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: true
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Flash-RL
+  date: '2026-10-29'
+  note: Card lists Text, Image, Video, Audio input. Tools and reasoning inferred from the vLLM tool-call
+    and reasoning parsers in the card's deployment commands. MIT license.
+params:
+  total:
+    value: 309000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Flash-RL
+    date: '2026-10-29'
+    note: Card says 309B; safetensors metadata 311B. Read from the -RL checkpoint card (the base repo
+      returned 401).
+  active:
+    value: 15000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Flash-RL
+    date: '2026-10-29'

@@ -1,0 +1,27 @@
+id: claude-haiku-5-5
+name: Claude Haiku 5.5
+family: claude-5.5
+vendor: Anthropic
+open_weights: false
+context_window:
+  value: 1000000
+  status: published
+  source: https://platform.claude.com/docs/en/models/haiku-5-5/overview
+  date: '2026-10-29'
+output_window:
+  value: 128000
+  status: published
+  source: https://platform.claude.com/docs/en/models/haiku-5-5/overview
+  date: '2026-10-29'
+  note: Synchronous Messages API limit; up to 300K on the Message Batches API with the output-300k-2026-03-24
+    beta header.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://platform.claude.com/docs/en/models/haiku-5-5/overview
+  date: '2026-10-29'
+  note: 'Overview: ''Text and images -> text'', adaptive thinking with effort. Tool use is not listed
+    on the overview page itself but is a standard Claude API capability (https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview).'

@@ -1,0 +1,55 @@
+name: refresh
+
+# Every day, the scrapers re-read the providers' published data. When a
+# provider changed something, the run opens (or updates) one pull request:
+# the catalog feeds the prices Xolo bills with, so a maintainer reviews every
+# change before it reaches a release.
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tools/requirements.txt
+      - name: Scrape the providers
+        id: scrape
+        # A source that fails is reported in the run, the others still refresh.
+        continue-on-error: true
+        run: python tools/refresh.py
+      - name: Validate
+        run: python tools/catalog.py validate --max-age-days 180
+      - name: Propose the changes
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: refresh/daily
+          delete-branch: true
+          commit-message: "data: refresh from the providers' published data"
+          title: "data: refresh from the providers' published data"
+          body: |
+            Changes the daily scrapers found in the providers' published data.
+
+            Check each changed value against its `source` before merging. Values
+            that did not change keep their date, except those older than 30 days,
+            which are confirmed with today's date.
+
+            Scrape step outcome: `${{ steps.scrape.outcome }}`. When it failed, a
+            source no longer parses: see the run's annotations.
+          labels: data
+      - name: Fail when a source broke
+        if: steps.scrape.outcome == 'failure'
+        run: exit 1

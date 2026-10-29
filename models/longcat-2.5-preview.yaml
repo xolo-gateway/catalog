@@ -1,0 +1,41 @@
+id: longcat-2.5-preview
+name: LongCat 2.5 Preview
+family: longcat
+vendor: Meituan
+open_weights: false
+context_window:
+  value: 1048576
+  status: published
+  source: https://longcat.chat/platform/docs/
+  date: '2026-10-29'
+  note: Docs list LongCat-2.5-Preview with '1M token context window'.
+output_window:
+  value: 131072
+  status: published
+  source: https://longcat.chat/platform/docs/
+  date: '2026-10-29'
+  note: 'Docs: ''maximum output length of 128K tokens''.'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: estimated
+  source: https://www.nocode.mba/ai-release-tracker/releases/longcat-2.5-preview
+  date: '2026-10-29'
+  note: Vision from Meituan's announcement (https://x.com/Meituan_LongCat/status/2103488918788411728,
+    relayed by this tracker; not fetched directly). Tools and reasoning inferred from LongCat-2.0 and
+    the stated agent-harness compatibility; vendor docs do not list capabilities.
+params:
+  total:
+    value: 1600000000000
+    status: estimated
+    source: https://huggingface.co/meituan-longcat/LongCat-2.0
+    date: '2026-10-29'
+    note: Assumed to be the LongCat-2.0 base (1.6T); Meituan has not confirmed the size of 2.5 Preview.
+  active:
+    value: 48000000000
+    status: estimated
+    source: https://huggingface.co/meituan-longcat/LongCat-2.0
+    date: '2026-10-29'
+    note: Assumed equal to LongCat-2.0 (~48B); not confirmed by Meituan.

@@ -1,0 +1,31 @@
+id: kimi-k2.7-code
+name: Kimi K2.7 Code
+family: kimi-k2
+vendor: Moonshot AI
+open_weights: true
+context_window:
+  value: 262144
+  status: published
+  source: https://huggingface.co/moonshotai/Kimi-K2.7-Code
+  date: '2026-10-29'
+  note: Card and platform docs state '256K'.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/moonshotai/Kimi-K2.7-Code
+  date: '2026-10-29'
+  note: Image and video input; thinking forced on. Modified MIT license.
+params:
+  total:
+    value: 1000000000000
+    status: published
+    source: https://huggingface.co/moonshotai/Kimi-K2.7-Code
+    date: '2026-10-29'
+  active:
+    value: 32000000000
+    status: published
+    source: https://huggingface.co/moonshotai/Kimi-K2.7-Code
+    date: '2026-10-29'

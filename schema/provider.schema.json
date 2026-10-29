@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xolo-gateway/catalog/schema/provider.schema.json",
+  "title": "Provider",
+  "description": "One provider, the models it serves (its offerings) and the subscription plans it sells. File: providers/<id>.yaml.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "website",
+    "currency",
+    "xolo",
+    "offerings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "website": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "xolo": {
+      "type": "object",
+      "description": "How Xolo reaches the provider by default: its provider type and base URL.",
+      "required": [
+        "type",
+        "base_url"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/apiType"
+        },
+        "base_url": {
+          "$ref": "#/$defs/url"
+        }
+      }
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/plan"
+      }
+    },
+    "offerings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/offering"
+      }
+    }
+  },
+  "$defs": {
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://[^?#@]+$"
+    },
+    "apiType": {
+      "enum": [
+        "openai",
+        "openai-responses",
+        "anthropic",
+        "gemini",
+        "mistral",
+        "openrouter"
+      ],
+      "description": "A Xolo provider type: the API a model is called through."
+    },
+    "offering": {
+      "type": "object",
+      "description": "One model as this provider serves it.",
+      "required": [
+        "model",
+        "model_id",
+        "prices"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "$ref": "common.schema.json#/$defs/id",
+          "description": "The id of the upstream model, a file of models/."
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The model ID the provider expects in requests."
+        },
+        "api_type": {
+          "$ref": "#/$defs/apiType",
+          "description": "The API this model is called through, when it is not the provider's default."
+        },
+        "base_url": {
+          "$ref": "#/$defs/url",
+          "description": "The base URL of that API, when it is not the provider's default."
+        },
+        "context_window": {
+          "$ref": "common.schema.json#/$defs/count",
+          "description": "The window this provider serves, when it is narrower than the model's."
+        },
+        "output_window": {
+          "$ref": "common.schema.json#/$defs/count"
+        },
+        "prices": {
+          "$ref": "#/$defs/prices"
+        },
+        "throughput": {
+          "type": "object",
+          "description": "Decode throughput in tokens per second.",
+          "required": [
+            "low",
+            "high"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "high": {
+              "type": "number",
+              "minimum": 0
+            },
+            "status": true,
+            "source": true,
+            "date": true,
+            "note": true
+          },
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/provenance"
+            }
+          ]
+        }
+      }
+    },
+    "prices": {
+      "type": "object",
+      "description": "Prices per million tokens in the provider's currency. input, cached_input and output are the base tier; tiers and peak keep the other prices as published.",
+      "required": [
+        "input",
+        "output"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      ],
+      "properties": {
+        "input": {
+          "$ref": "common.schema.json#/$defs/price"
+        },
+        "cached_input": {
+          "$ref": "common.schema.json#/$defs/price"
+        },
+        "output": {
+          "$ref": "common.schema.json#/$defs/price"
+        },
+        "tiers": {
+          "type": "array",
+          "description": "Prices that apply above a prompt size.",
+          "items": {
+            "type": "object",
+            "required": [
+              "above_input_tokens",
+              "input",
+              "output"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "above_input_tokens": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "input": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "cached_input": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "output": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "cache_write": {
+                "$ref": "common.schema.json#/$defs/price"
+              }
+            }
+          }
+        },
+        "peak": {
+          "type": "array",
+          "description": "Prices that apply during given hours.",
+          "items": {
+            "type": "object",
+            "required": [
+              "hours",
+              "timezone",
+              "input",
+              "output"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "hours": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$"
+                },
+                "description": "The time ranges the peak prices apply in."
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1
+              },
+              "input": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "cached_input": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "output": {
+                "$ref": "common.schema.json#/$defs/price"
+              },
+              "days": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "mon",
+                    "tue",
+                    "wed",
+                    "thu",
+                    "fri",
+                    "sat",
+                    "sun"
+                  ]
+                },
+                "description": "The days the peak applies on, every day when absent."
+              },
+              "cache_write": {
+                "$ref": "common.schema.json#/$defs/price"
+              }
+            }
+          }
+        },
+        "status": true,
+        "source": true,
+        "date": true,
+        "note": true,
+        "cache_write": {
+          "$ref": "common.schema.json#/$defs/price",
+          "description": "The price of writing to the cache, when the provider bills it apart."
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "description": "A subscription plan, in the vocabulary of Xolo's plan constraints.",
+      "required": [
+        "id",
+        "name",
+        "constraints"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "price": {
+          "type": "object",
+          "required": [
+            "amount",
+            "period"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            },
+            "period": {
+              "enum": [
+                "month",
+                "year"
+              ]
+            }
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/constraint"
+          }
+        },
+        "status": true,
+        "source": true,
+        "date": true,
+        "note": true
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token_budget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value_budget": {
+          "type": "number",
+          "minimum": 0,
+          "description": "In the provider's currency."
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": [
+        "kind",
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "rolling_window",
+            "concurrency"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration": {
+          "type": "string",
+          "pattern": "^([0-9]+h)?([0-9]+m)?$",
+          "description": "A Go duration in hours and minutes, such as 5h or 168h."
+        },
+        "fixed_window": {
+          "type": "boolean",
+          "description": "true when the window resets on a fixed schedule rather than sliding."
+        },
+        "scope": {
+          "enum": [
+            "provider",
+            "model"
+          ]
+        },
+        "token_budget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value_budget": {
+          "type": "number",
+          "minimum": 0,
+          "description": "In the provider's currency."
+        },
+        "max_concurrent": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "model_budgets": {
+          "type": "object",
+          "description": "Per offering model_id, budgets that replace the constraint's own. A model listed with no budget is unlimited.",
+          "additionalProperties": {
+            "$ref": "#/$defs/budget"
+          }
+        }
+      }
+    }
+  }
+}

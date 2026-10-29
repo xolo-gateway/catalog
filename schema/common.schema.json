@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xolo-gateway/catalog/schema/common.schema.json",
+  "title": "Shared definitions of the Xolo model catalog",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Stable identifier: lower case letters, digits, dot, dash and underscore."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "status": {
+      "enum": ["published", "measured", "estimated"],
+      "description": "published: stated by the vendor or provider; measured: observed by a contributor; estimated: inferred, with the reasoning in note."
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["status", "source", "date"],
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "source": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "date": { "$ref": "#/$defs/date" },
+        "note": { "type": "string", "minLength": 1 }
+      },
+      "if": { "properties": { "status": { "const": "estimated" } } },
+      "then": { "required": ["note"] }
+    },
+    "count": {
+      "description": "A sourced whole number: a token count or a parameter count.",
+      "allOf": [{ "$ref": "#/$defs/provenance" }],
+      "type": "object",
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "integer", "minimum": 0 },
+        "status": true, "source": true, "date": true, "note": true
+      },
+      "additionalProperties": false
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "A price per million tokens, in the currency of the provider."
+    }
+  }
+}

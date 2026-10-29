@@ -1,0 +1,43 @@
+id: beam
+name: Beam Free
+family: beam
+vendor: Reflection AI
+open_weights: true
+context_window:
+  value: 1048576
+  status: estimated
+  source: https://reflection.ai/blog/introducing-beam
+  date: '2026-10-29'
+  note: OpenCode does not name the underlying model; identification as Reflection Beam 1.0 (501B-A23B)
+    rests on OpenCode's 'Beam ... 1M context' post and its selector metadata, as reported by https://www.orcarouter.ai/fr/blog/beam-1-0-free-opencode-1m-context.
+    Reflection's blog says midtraining extends context to 1M.
+output_window:
+  value: 131072
+  status: estimated
+  source: https://www.orcarouter.ai/fr/blog/beam-1-0-free-opencode-1m-context
+  date: '2026-10-29'
+  note: Reported from OpenCode's model metadata by a third party; Reflection states no output limit.
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: estimated
+  source: https://reflection.ai/blog/introducing-beam
+  date: '2026-10-29'
+  note: Values are published for Beam 1.0 (text-only, tool use, adjustable reasoning effort); estimated
+    only because beam-free = Beam 1.0 is inferred.
+params:
+  total:
+    value: 501000000000
+    status: estimated
+    source: https://reflection.ai/blog/introducing-beam
+    date: '2026-10-29'
+    note: Reflection states 501B total for Beam 1.0; applying it to beam-free is an inference (see context_window
+      note).
+  active:
+    value: 23000000000
+    status: estimated
+    source: https://reflection.ai/blog/introducing-beam
+    date: '2026-10-29'
+    note: Reflection states 23B active for Beam 1.0; same identity caveat.

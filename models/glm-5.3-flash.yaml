@@ -1,0 +1,38 @@
+id: glm-5.3-flash
+name: GLM-5.3-Flash
+family: glm-5
+vendor: Z.ai (Zhipu AI)
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.3-flash
+  date: '2026-10-29'
+  note: Docs state '1M'; 1,048,576 assumed as the binary reading.
+output_window:
+  value: 131072
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.3-flash
+  date: '2026-10-29'
+  note: Docs state '128K'.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.3-flash
+  date: '2026-10-29'
+  note: 'Inputs: video, image, text, file. Thinking always on (cannot be disabled).'
+params:
+  total:
+    value: 320000000000
+    status: published
+    source: https://huggingface.co/zai-org/GLM-5.3-Flash
+    date: '2026-10-29'
+    note: Card text says 320B; safetensors metadata shows 321B.
+  active:
+    value: 18000000000
+    status: published
+    source: https://huggingface.co/zai-org/GLM-5.3-Flash
+    date: '2026-10-29'

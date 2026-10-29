@@ -1,0 +1,41 @@
+id: glm-5.2
+name: GLM-5.2
+family: glm-5
+vendor: Z.ai (Zhipu AI)
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.2
+  date: '2026-10-29'
+  note: 'Docs: ''1M''; config.json max_position_embeddings = 1048576.'
+output_window:
+  value: 131072
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.2
+  date: '2026-10-29'
+  note: 'Docs: ''128K''.'
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://docs.z.ai/guides/llm/glm-5.2
+  date: '2026-10-29'
+  note: Text-only input; thinking can be enabled or disabled.
+params:
+  total:
+    value: 753000000000
+    status: published
+    source: https://huggingface.co/zai-org/GLM-5.2
+    date: '2026-10-29'
+    note: Safetensors size on the vendor's HF repo.
+  active:
+    value: 40000000000
+    status: estimated
+    source: https://huggingface.co/zai-org/GLM-5.2/blob/main/config.json
+    date: '2026-10-29'
+    note: Z.ai does not state active parameters for this release. Its config.json has the same MoE layout
+      as GLM-5 (78 layers, hidden 6144, 256 routed experts, 8 per token, 1 shared), for which Z.ai states
+      40B active (https://huggingface.co/zai-org/GLM-5).

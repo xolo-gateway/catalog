@@ -1,0 +1,28 @@
+id: gemini-4-argon
+name: Gemini 4 Argon
+family: gemini-4
+vendor: Google
+open_weights: false
+context_window:
+  value: 1048576
+  status: published
+  source: https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+  date: '2026-10-29'
+  note: Google gives a unified input+output token limit of 1,048,576.
+output_window:
+  value: 65536
+  status: published
+  source: https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+  date: '2026-10-29'
+  note: 65,536 default synchronous; up to 1,048,576 with long decode.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: true
+  status: published
+  source: https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+  date: '2026-10-29'
+  note: 'Inputs: text, image, video, audio, PDF; output text; function calling supported; thinking low/medium/high.
+    Facts are for Google''s gemini-4-argon; the ''-contributor'' suffix is OpenCode''s and not documented
+    by Google.'

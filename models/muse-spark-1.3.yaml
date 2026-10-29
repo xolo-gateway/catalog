@@ -1,0 +1,42 @@
+id: muse-spark-1.3
+name: Muse Spark 1.3 Contributor
+family: muse-spark
+vendor: Meta
+open_weights: false
+context_window:
+  value: 1048576
+  status: published
+  source: https://dev.meta.ai/docs/models
+  date: '2026-10-29'
+  note: 'Meta Model API docs: Muse Spark versions ''have a 1,048,576-token context window''. The contributor
+    variant is the same model at a lower price, with Meta allowed to use the content for training.'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: true
+  status: published
+  source: https://dev.meta.ai/docs/models
+  date: '2026-10-29'
+  note: 'Docs: text, image, video, audio and PDF input; agentic multi-step tool loops; all reasoning effort
+    levels except ''max'' on the contributor variant. Docs say audio understanding in 1.3 ''is not fully
+    supported'' and responses with audio may be degraded.'
+params:
+  total:
+    value: 816000000000
+    status: estimated
+    source: https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B
+    date: '2026-10-29'
+    note: Meta has not published the hosted Muse Spark's size. Muse Spark Open's model card (816B total
+      / 42B active, 1M context) calls itself 'this open weights version' with extra safety post-training,
+      suggesting it shares the Muse Spark architecture; assuming the hosted Muse Spark 1.3 is the same
+      size is an inference, and later point releases may differ.
+  active:
+    value: 42000000000
+    status: estimated
+    source: https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B
+    date: '2026-10-29'
+    note: Meta has not published the hosted Muse Spark's size. Muse Spark Open's model card (816B total
+      / 42B active, 1M context) calls itself 'this open weights version' with extra safety post-training,
+      suggesting it shares the Muse Spark architecture; assuming the hosted Muse Spark 1.3 is the same
+      size is an inference, and later point releases may differ.

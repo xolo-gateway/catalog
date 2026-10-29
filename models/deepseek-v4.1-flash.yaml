@@ -1,0 +1,45 @@
+id: deepseek-v4.1-flash
+name: DeepSeek V4.1 Flash
+family: deepseek-v4
+vendor: DeepSeek
+open_weights: true
+context_window:
+  value: 1000000
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: API docs list deepseek-flash (served by DeepSeek-V4.1-Flash-1017) with context length '1M'; the
+    exact token count may be 1,048,576 (third-party listings vary). The HF card also says up to one million
+    tokens.
+output_window:
+  value: 384000
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: Docs state 'Maximum 384K'; whether K = 1000 or 1024 is not specified.
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: Tool calls, vision and thinking mode listed in the API docs; the HF card (https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash)
+    says it natively processes images and text; audio not mentioned anywhere.
+params:
+  total:
+    value: 552000000000
+    status: published
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash
+    date: '2026-10-29'
+    note: Model card cites 552B backbone parameters; the HF safetensors metadata counts 763B (likely including
+      the vision encoder and MTP/speculative modules). The API now serves the 1017 minor update, same
+      763B safetensors size.
+  active:
+    value: 16000000000
+    status: published
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash
+    date: '2026-10-29'
+    note: Card states 8B activated per token during prefill and 16B during decode; the decode figure is
+      retained here.

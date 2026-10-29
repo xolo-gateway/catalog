@@ -1,0 +1,35 @@
+id: mimo-v2.5
+name: MiMo-V2.5
+family: mimo
+vendor: Xiaomi
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5
+  date: '2026-10-29'
+  note: 'Model card: ''Context Length: Up to 1M tokens''; config.json max_position_embeddings = 1048576.'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: true
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5
+  date: '2026-10-29'
+  note: 'Card: ''native omnimodal model ... text, image, video, and audio understanding''; strong agentic
+    capabilities; SGLang recipe uses --tool-call-parser mimo and --reasoning-parser qwen3. A dedicated
+    reasoning toggle is not documented.'
+params:
+  total:
+    value: 310000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5
+    date: '2026-10-29'
+    note: '''Sparse MoE, 310B total / 15B activated parameters'', excluding the 729M ViT, 261M audio encoder
+      and 329M MTP.'
+  active:
+    value: 15000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5
+    date: '2026-10-29'

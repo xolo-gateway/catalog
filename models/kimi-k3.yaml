@@ -1,0 +1,37 @@
+id: kimi-k3
+name: Kimi K3
+family: kimi-k3
+vendor: Moonshot AI
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/moonshotai/Kimi-K3
+  date: '2026-10-29'
+output_window:
+  value: 1048576
+  status: published
+  source: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart
+  date: '2026-10-29'
+  note: max_completion_tokens defaults to 131072 and can be set up to 1048576 (shared with the context
+    window).
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/moonshotai/Kimi-K3
+  date: '2026-10-29'
+  note: Text, image and video input; thinking always on. Weights under the custom 'Kimi K3 License'.
+params:
+  total:
+    value: 2800000000000
+    status: published
+    source: https://huggingface.co/moonshotai/Kimi-K3
+    date: '2026-10-29'
+  active:
+    value: 104000000000
+    status: published
+    source: https://huggingface.co/moonshotai/Kimi-K3
+    date: '2026-10-29'

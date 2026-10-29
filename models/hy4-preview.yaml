@@ -1,0 +1,40 @@
+id: hy4-preview
+name: Hy4 preview
+family: hy-tencent-hunyuan
+vendor: Tencent
+open_weights: true
+context_window:
+  value: 1000000
+  status: published
+  source: https://huggingface.co/tencent/Hy4-preview
+  date: '2026-10-29'
+  note: Model card specification table gives 1M tokens; some catalogs list 1,024,000.
+output_window:
+  value: 64000
+  status: estimated
+  source: https://cloudprice.net/models/tencent/hy4-preview
+  date: '2026-10-29'
+  note: Not stated on Tencent's model card; third-party catalogs give 64,000 (cloudprice) or 65,536 (typingmind/LLM
+    Gateway route for Tencent Cloud). Unconfirmed on a Tencent page.
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/tencent/Hy4-preview
+  date: '2026-10-29'
+  note: Card shows a tool-call parser (hy_v4) for vLLM/SGLang and reasoning_effort (default deep thinking,
+    no_think available); describes text generation only, no image or audio input mentioned.
+params:
+  total:
+    value: 770000000000
+    status: published
+    source: https://huggingface.co/tencent/Hy4-preview
+    date: '2026-10-29'
+    note: 'Card: 770B total parameters; safetensors metadata shows 780B, likely including the MTP layer.'
+  active:
+    value: 49000000000
+    status: published
+    source: https://huggingface.co/tencent/Hy4-preview
+    date: '2026-10-29'

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xolo-gateway/catalog/schema/model.schema.json",
+  "title": "Upstream model",
+  "description": "One model as its vendor releases it, whoever serves it. File: models/<id>.yaml.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "vendor"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "family": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "vendor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "open_weights": {
+      "type": "boolean"
+    },
+    "kind": {
+      "enum": [
+        "completion",
+        "embeddings"
+      ],
+      "default": "completion"
+    },
+    "context_window": {
+      "$ref": "common.schema.json#/$defs/count",
+      "description": "Absent until a contributor sources it."
+    },
+    "output_window": {
+      "$ref": "common.schema.json#/$defs/count"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "type": "boolean"
+        },
+        "vision": {
+          "type": "boolean"
+        },
+        "reasoning": {
+          "type": "boolean"
+        },
+        "audio": {
+          "type": "boolean"
+        },
+        "status": true,
+        "source": true,
+        "date": true,
+        "note": true
+      },
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      ]
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Parameter counts. For a dense model, active equals total.",
+      "properties": {
+        "total": {
+          "$ref": "common.schema.json#/$defs/count"
+        },
+        "active": {
+          "$ref": "common.schema.json#/$defs/count"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+id: qwen3.8-max
+name: Qwen3.8 Max
+family: qwen3.8
+vendor: Alibaba (Qwen)
+open_weights: true
+context_window:
+  value: 1000000
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-max
+  date: '2026-10-29'
+  note: 'Qwen Cloud model page displays ''1M'' context and ''131K'' max output (thinking and non-thinking),
+    max reasoning 262K; 131K read as 131,072 and 1M as 1,000,000 (display rounding). HF card of the base:
+    262,144 native, extensible to 1,010,000.'
+output_window:
+  value: 131072
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-max
+  date: '2026-10-29'
+  note: Qwen Cloud model page displays '1M' context and '131K' max output (thinking and non-thinking),
+    max reasoning 262K; 131K read as 131,072 and 1M as 1,000,000 (display rounding).
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://www.qwencloud.com/models/qwen3.8-max
+  date: '2026-10-29'
+  note: 'Qwen Cloud: image, text and video input, function calling, thinking mode. The open Qwen3.8-2.4T-A95B
+    checkpoint is text-only with thinking always on; vision and non-thinking are hosted-only features
+    of Qwen3.8-Max.'
+params:
+  total:
+    value: 2400000000000
+    status: published
+    source: https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B
+    date: '2026-10-29'
+    note: 'Card: Qwen3.8-Max ''is the official version based on Qwen3.8-2.4T-A95B''; ''Number of Parameters:
+      2.4T in total and 95B activated''. Any vision encoder in the hosted version is not counted.'
+  active:
+    value: 95000000000
+    status: published
+    source: https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B
+    date: '2026-10-29'

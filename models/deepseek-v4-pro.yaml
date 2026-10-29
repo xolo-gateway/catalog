@@ -1,0 +1,41 @@
+id: deepseek-v4-pro
+name: DeepSeek V4 Pro
+family: deepseek-v4
+vendor: DeepSeek
+open_weights: true
+context_window:
+  value: 1000000
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: API docs list deepseek-v4-pro (DeepSeek-V4-Pro-0813) with context length '1M'; the V4-Pro HF card
+    says 'a context length of one million tokens'.
+output_window:
+  value: 384000
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: Docs state 'Maximum 384K'; the V4-Pro-0813 HF card also recommends a maximum output length of
+    384K.
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://api-docs.deepseek.com/quick_start/pricing/
+  date: '2026-10-29'
+  note: API docs list tool calls yes, vision no, thinking and non-thinking modes; audio not mentioned.
+params:
+  total:
+    value: 1600000000000
+    status: published
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro
+    date: '2026-10-29'
+    note: 'V4-Pro card: ''1.6T parameters (49B activated)''. The served 0813 checkpoint (https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro-0813)
+      keeps the V4-Pro structure plus a DSpark speculative module; HF metadata counts 1.7T.'
+  active:
+    value: 49000000000
+    status: published
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro
+    date: '2026-10-29'

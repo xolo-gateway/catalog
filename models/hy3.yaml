@@ -1,0 +1,38 @@
+id: hy3
+name: Hy3
+family: hy-tencent-hunyuan
+vendor: Tencent
+open_weights: true
+context_window:
+  value: 262144
+  status: published
+  source: https://huggingface.co/tencent/Hy3
+  date: '2026-10-29'
+  note: Card states 256K tokens; 262,144 = 256 x 1024, consistent with Vercel AI Gateway's 262.1K listing.
+output_window:
+  value: 64000
+  status: estimated
+  source: https://docs.openclaw.ai/providers/tencent.md
+  date: '2026-10-29'
+  note: Not stated by Tencent's model card; OpenClaw provider docs and catalogs list 64,000 max output
+    for Hy3 on TokenHub (cloudprice lists up to 128K). Unconfirmed on a Tencent page.
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/tencent/Hy3
+  date: '2026-10-29'
+  note: Card shows tool-call parser flags and reasoning_effort (no_think default, low, high); text-only.
+params:
+  total:
+    value: 295000000000
+    status: published
+    source: https://huggingface.co/tencent/Hy3
+    date: '2026-10-29'
+  active:
+    value: 21000000000
+    status: published
+    source: https://huggingface.co/tencent/Hy3
+    date: '2026-10-29'

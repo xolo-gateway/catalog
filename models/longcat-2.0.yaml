@@ -1,0 +1,39 @@
+id: longcat-2.0
+name: LongCat-2.0
+family: longcat
+vendor: Meituan
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://longcat.chat/platform/docs/
+  date: '2026-10-29'
+  note: 'Docs: ''1M token context window''; binary reading assumed.'
+output_window:
+  value: 131072
+  status: published
+  source: https://longcat.chat/platform/docs/
+  date: '2026-10-29'
+  note: 'Docs: ''maximum output length of 128K tokens''.'
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/meituan-longcat/LongCat-2.0
+  date: '2026-10-29'
+  note: Tools and switchable thinking from the chat template; text-only per the card. MIT license.
+params:
+  total:
+    value: 1600000000000
+    status: published
+    source: https://huggingface.co/meituan-longcat/LongCat-2.0
+    date: '2026-10-29'
+    note: Card says 1.6T; safetensors metadata shows ~1.8T (includes a ~135B N-gram embedding component).
+  active:
+    value: 48000000000
+    status: published
+    source: https://huggingface.co/meituan-longcat/LongCat-2.0
+    date: '2026-10-29'
+    note: Card says '~48 billion activated per token' (dynamic, approximate).

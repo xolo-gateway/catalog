@@ -1,0 +1,29 @@
+id: grok-4.7
+name: Grok 4.7
+family: grok-4
+vendor: xAI (SpaceXAI)
+open_weights: false
+context_window:
+  value: 500000
+  status: published
+  source: https://docs.x.ai/docs/models/grok-4.7
+  date: '2026-10-29'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: false
+  status: published
+  source: https://docs.x.ai/docs/models/grok-4.7
+  date: '2026-10-29'
+  note: 'xAI docs: function calling yes, reasoning yes, modalities ''text, image -> text''; audio not
+    listed.'
+params:
+  total:
+    value: 2100000000000
+    status: estimated
+    source: https://x.com/elonmusk/status/2082123925283041545
+    date: '2026-10-29'
+    note: 'Pre-release X post by xAI''s CEO (2026-07-28, reported by https://tbreak.com/grok-4-6-4-7-xai-release-date-specs/):
+      ''Grok 4.7 will be the 2.1T model''. Not in xAI''s docs, and not stated whether total or active;
+      assumed total (MoE).'

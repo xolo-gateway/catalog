@@ -1,0 +1,35 @@
+id: mimo-v2.6-pro
+name: MiMo-V2.6-Pro
+family: mimo
+vendor: Xiaomi
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL
+  date: '2026-10-29'
+  note: 'Model card: ''Context Length: 1M tokens''; config.json max_position_embeddings = 1048576.'
+capabilities:
+  tools: true
+  vision: true
+  reasoning: true
+  audio: true
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL
+  date: '2026-10-29'
+  note: Model card lists modalities 'Text, Image, Video, Audio'; serving recipes use --reasoning-parser
+    mimo and --tool-call-parser mimo. Open checkpoints are MiMo-V2.6-Pro-RL and -MOPD; the hosted API
+    model is assumed to match them.
+params:
+  total:
+    value: 1020000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL
+    date: '2026-10-29'
+    note: '''Sparse MoE, 1.02T total / 42B activated parameters'' (LLM backbone; the 681M vision encoder
+      and 308M+127M audio encoders are listed separately).'
+  active:
+    value: 42000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL
+    date: '2026-10-29'

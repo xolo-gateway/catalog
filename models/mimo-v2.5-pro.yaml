@@ -1,0 +1,43 @@
+id: mimo-v2.5-pro
+name: MiMo-V2.5-Pro
+family: mimo
+vendor: Xiaomi
+open_weights: true
+context_window:
+  value: 1048576
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5-Pro
+  date: '2026-10-29'
+  note: 'Card: ''up to 1M tokens context length''; config.json max_position_embeddings = 1048576; Alibaba
+    Cloud Model Studio also lists 1,048,576.'
+output_window:
+  value: 131072
+  status: measured
+  source: https://help.aliyun.com/en/model-studio/mimo-v2-5-pro
+  date: '2026-10-29'
+  note: Limit stated by Alibaba Cloud Model Studio for its hosted xiaomi/mimo-v2.5-pro (max output 131,072,
+    same in thinking mode). It is a third-party host's limit, not Xiaomi's own API docs, which could not
+    be retrieved (JS-only page).
+capabilities:
+  tools: true
+  vision: false
+  reasoning: true
+  audio: false
+  status: published
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5-Pro
+  date: '2026-10-29'
+  note: 'Text-only model (no vision/audio config in config.json; Alibaba Cloud also lists text-only input).
+    Card: ''sustains complex trajectories spanning thousands of tool calls''; recipe uses --reasoning-parser
+    mimo and --tool-call-parser mimo.'
+params:
+  total:
+    value: 1020000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5-Pro
+    date: '2026-10-29'
+    note: '''1.02T total parameters and 42B active parameters''.'
+  active:
+    value: 42000000000
+    status: published
+    source: https://huggingface.co/XiaomiMiMo/MiMo-V2.5-Pro
+    date: '2026-10-29'
