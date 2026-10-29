@@ -84,9 +84,19 @@ The prices, model lists and plan limits a provider publishes change often. `tool
 | `opencode-go` | the tables of https://opencode.ai/docs/go/ | offerings, API types, prices (tiers and peak hours included), plans and their per-model budgets; adds the models OpenCode Go starts serving |
 | `openrouter` | https://openrouter.ai/api/v1/models | prices and windows of the offerings already in `providers/openrouter.yaml` |
 
-A value that did not change keeps its date, unless it is older than 30 days, when it is confirmed with the day's date. The `refresh` workflow runs it daily and opens one pull request when a provider changed something: a maintainer checks it against the sources before it is merged and released. A model a provider starts serving gets a file with its name and vendor only. Its windows, capabilities and parameter counts are left for a contributor to source, as no scraper can read them reliably from heterogeneous vendor pages.
+A value that did not change keeps its date, unless it is older than 30 days, when it is confirmed with the day's date. A model a provider starts serving gets a file with its name and vendor only: its windows, capabilities and parameter counts are left for a contributor to source, as no scraper can read them reliably from heterogeneous vendor pages.
 
-A scraper that no longer parses its page fails the run with an annotation, rather than writing a partial result.
+### Safeguards
+
+A misread page must never become a price. The `refresh` workflow runs every day and opens one pull request when a provider changed something. That pull request merges on its own only when every safeguard holds:
+
+- **Strict reading.** Each scraper expects its tables, columns, cell formats, price qualifiers (tiers, peak hours, discounts) and endpoints exactly. Anything else (an unreadable price, a missing column, a model priced but without an endpoint, a row of the wrong length) fails that source, which then writes nothing at all.
+- **Frozen pages.** The scrapers are tested on copies of the pages they read (`tools/fixtures`), including pages altered to break each rule.
+- **Determinism.** A second run on the same day must read exactly the same.
+- **Validation.** The catalog validates against its schemas and cross-references.
+- **Plausibility guard** (`tools/guard.py`). The change is held for review when a price moves by more than 30%, appears, vanishes or turns free, when an offering, a plan or a provider disappears, when an offering changes API, when a plan budget moves by more than 30% or turns limited or unlimited, when more than 5 offerings appear at once, or when an existing model file is edited.
+
+When a safeguard does not hold, the pull request stays open, its description says which safeguard failed and lists each implausible change, and any auto-merge an earlier run enabled is cancelled. Only the daily refresh pull request can merge on its own; every other pull request is merged by a maintainer.
 
 ## Contributing
 
