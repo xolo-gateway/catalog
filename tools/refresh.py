@@ -22,6 +22,7 @@ import json
 import pathlib
 import re
 import sys
+import time
 import urllib.request
 
 import yaml
@@ -58,10 +59,29 @@ def write_yaml(path, doc):
         print(f"updated {path.relative_to(ROOT)}")
 
 
-def fetch(url):
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read().decode("utf-8")
+class ParseError(ValueError):
+    """A page no longer reads the way its scraper expects: the source writes
+    nothing rather than a partial or misread result."""
+
+
+def fetch(url, attempts=3):
+    """Fetches url, retrying a transient failure. A non-200 answer or an
+    empty body is an error, never a page to parse."""
+    last = None
+    for attempt in range(attempts):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                if response.status != 200:
+                    raise ParseError(f"{url}: status {response.status}")
+                body = response.read().decode("utf-8")
+            if len(body) < 1000:
+                raise ParseError(f"{url}: suspiciously short answer ({len(body)} bytes)")
+            return body
+        except (OSError, ParseError) as error:
+            last = error
+            time.sleep(5 * (attempt + 1))
+    raise ParseError(f"{url}: {last}")
 
 
 # ── Provenance ───────────────────────────────────────────────────────────────
@@ -157,17 +177,74 @@ def page_tables(page):
     return parser.tables
 
 
-def as_dicts(table):
+def as_dicts(table, expected):
+    """The rows of table as dicts. Its header must hold every expected
+    column and each row as many cells as the header: a table that drifts is
+    an error, never a row silently dropped."""
+    if not table["rows"]:
+        raise ParseError("empty table")
     header, *rows = table["rows"]
-    return [dict(zip(header, row)) for row in rows if len(row) == len(header)]
+    missing = [c for c in expected if c not in header]
+    if missing:
+        raise ParseError(f"table {header} lacks the columns {missing}")
+    for row in rows:
+        if len(row) != len(header):
+            raise ParseError(f"row {row} does not match the header {header}")
+    if not rows:
+        raise ParseError(f"table {header} has no row")
+    return [dict(zip(header, row)) for row in rows]
+
+
+ABSENT = {"", "-", "—", "–", "n/a"}
+MONEY = re.compile(r"^\$\s?([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)$")
+
+
+TWO_AMOUNTS = re.compile(r"^\$\s?([0-9]+(?:\.[0-9]+)?)\s+\$\s?([0-9]+(?:\.[0-9]+)?)$")
+
+
+def price(text, discounted=False):
+    """A price cell: '$1.40' → 1.4, 'Free' → 0, '-' → None. On a discounted
+    row, '$4.00 $2.00' (the struck-out price, then the one in force) → 2.
+    Any other text is an error: a misread price is worse than none."""
+    t = text.strip()
+    if discounted:
+        m = TWO_AMOUNTS.match(t)
+        if m:
+            before, now = float(m.group(1)), float(m.group(2))
+            if now >= before:
+                raise ParseError(f"discounted price {text!r} is not lower than the struck-out one")
+            return now
+    if t.lower() in ABSENT:
+        return None
+    if re.match(r"^free", t, re.I):
+        return 0.0
+    m = MONEY.match(t)
+    if not m:
+        raise ParseError(f"unreadable price {text!r}")
+    return float(m.group(1).replace(",", ""))
+
+
+def limit(text):
+    """A monthly limit cell: '$60' → 60; '-', 'Free' or 'Unlimited' → None,
+    no limit. Any other text is an error."""
+    t = text.strip()
+    # "Unlimited" or "Free" may carry a note glued to it ("Unlimitedlimited
+    # time"): the word is what counts.
+    if t.lower() in ABSENT or re.match(r"^(free|unlimited)", t, re.I):
+        return None
+    m = MONEY.match(t)
+    if not m:
+        raise ParseError(f"unreadable limit {text!r}")
+    value = float(m.group(1).replace(",", ""))
+    if value <= 0:
+        raise ParseError(f"non-positive limit {text!r}")
+    return value
 
 
 def money(text):
-    """'$1.40' → 1.4; 'Free' → 0; '-' or '' → None."""
-    if text.strip().lower().startswith("free"):
-        return 0.0
-    m = re.search(r"([0-9]+(?:\.[0-9]+)?)", text.replace(",", ""))
-    return float(m.group(1)) if m and "$" in text else None
+    """A plan price: '$10/month' → 10, None when unreadable."""
+    m = re.search(r"\$\s?([0-9]+(?:\.[0-9]+)?)", text.replace(",", ""))
+    return float(m.group(1)) if m else None
 
 
 # ── OpenCode Go ──────────────────────────────────────────────────────────────
@@ -206,8 +283,27 @@ def catalog_model_id(model_id):
     return re.sub(r"-(free|contributor)$", "", model_id)
 
 
-def scrape_opencode_go(today):
-    page = fetch(OPENCODE_GO_URL)
+# The qualifiers a priced row may carry, the base tier first.
+QUALIFIERS = [
+    (re.compile(r"^$"), "base"),
+    (re.compile(r"^off-peak$", re.I), "base"),
+    (re.compile(r"^peak$", re.I), "peak"),
+    (re.compile(r"^[≤<]=?\s*[0-9]+K tokens$", re.I), "base"),
+    (re.compile(r"^>\s*([0-9]+)K tokens$", re.I), "tier"),
+    # A temporary discount: the price listed is the one in force.
+    (re.compile(r"^[0-9]+% off$", re.I), "discount"),
+]
+
+
+def qualifier_kind(qualifier):
+    for pattern, kind in QUALIFIERS:
+        if pattern.match(qualifier):
+            return kind
+    raise ParseError(f"unknown price qualifier {qualifier!r}")
+
+
+def scrape_opencode_go(today, page=None):
+    page = page if page is not None else fetch(OPENCODE_GO_URL)
     tables = page_tables(page)
     stamp = Stamp(today, OPENCODE_GO_URL)
 
@@ -217,9 +313,9 @@ def scrape_opencode_go(today):
 
     endpoints = next((t for t in tables if "Model ID" in columns(t) and "Endpoint" in columns(t)), None)
     if endpoints is None:
-        raise ValueError("OpenCode Go: the page no longer has its endpoint table")
+        raise ParseError("OpenCode Go: the page no longer has its endpoint table")
     by_name = {}
-    for row in as_dicts(endpoints):
+    for row in as_dicts(endpoints, ["Model", "Model ID", "Endpoint"]):
         model_id, endpoint = row["Model ID"], row["Endpoint"]
         for pattern, api_type in OPENCODE_ENDPOINTS:
             m = pattern.match(endpoint)
@@ -227,11 +323,11 @@ def scrape_opencode_go(today):
                 by_name[row["Model"]] = {"model_id": model_id, "api_type": api_type, "base_url": m.group(1)}
                 break
         else:
-            raise ValueError(f"OpenCode Go: unknown endpoint {endpoint!r} for {model_id}")
+            raise ParseError(f"OpenCode Go: unknown endpoint {endpoint!r} for {model_id}")
 
     usage = [t for t in tables if "Monthly limit" in columns(t) and t["panel"]]
     if not usage or not by_name:
-        raise ValueError("OpenCode Go: the page no longer has its usage or endpoint tables")
+        raise ParseError("OpenCode Go: the page no longer has its usage or endpoint tables")
 
     text = re.sub(r"<[^>]+>", " ", page)
     peak = re.search(r"Peak hours are ([0-9:]+-[0-9:]+)(?: and ([0-9:]+-[0-9:]+))? UTC, Monday through Friday", text)
@@ -241,46 +337,64 @@ def scrape_opencode_go(today):
     # "(> 256K tokens)") or by time of day ("(Off-Peak)", "(Peak)").
     prices = {}
     limits = {}
+    usage_columns = ["Model", "Input", "Output", "Cached Read", "Cached Write", "Monthly limit"]
     for table in usage:
         plan = table["panel"]
-        for row in as_dicts(table):
+        for row in as_dicts(table, usage_columns):
             label = row["Model"]
             base = re.sub(r"\s*\(.*\)$", "", label).strip()
-            qualifier = (re.search(r"\((.*)\)$", label) or [None, ""])[1]
-            limits.setdefault(plan, {})[base] = money(row.get("Monthly limit", ""))
+            qualifier = (re.search(r"\((.*)\)$", label) or [None, ""])[1].strip()
+            kind = qualifier_kind(qualifier)
+            if base not in by_name:
+                raise ParseError(f"OpenCode Go: {label!r} is priced but not in the endpoint table")
+            limits.setdefault(plan, {})[base] = limit(row["Monthly limit"])
             if table is not usage[0]:
                 continue
+            discounted = kind == "discount"
+            if discounted:
+                kind = "base"
             entry = {
-                "input": money(row["Input"]),
-                "output": money(row["Output"]),
-                "cached_input": money(row.get("Cached Read", "")),
-                "cache_write": money(row.get("Cached Write", "")),
+                "input": price(row["Input"], discounted),
+                "output": price(row["Output"], discounted),
+                "cached_input": price(row["Cached Read"], discounted),
+                "cache_write": price(row["Cached Write"], discounted),
             }
-            prices.setdefault(base, []).append((qualifier, entry))
+            if entry["input"] is None or entry["output"] is None:
+                raise ParseError(f"OpenCode Go: {label!r} has no input or output price")
+            if kind == "peak" and not peak:
+                raise ParseError(f"OpenCode Go: {label!r} is a peak price but the page no longer states the peak hours")
+            prices.setdefault(base, []).append((qualifier, kind, entry))
+    # Every plan prices the same models: a plan that lists others is a
+    # table read wrong.
+    for plan, monthly in limits.items():
+        if set(monthly) != set(limits[usage[0]["panel"]]):
+            raise ParseError(f"OpenCode Go: plan {plan!r} lists other models than {usage[0]['panel']!r}")
 
     provider_path = ROOT / "providers" / "opencode-go.yaml"
     provider = load_yaml(provider_path) if provider_path.exists() else {}
     old_offerings = {o["model_id"]: o for o in provider.get("offerings") or []}
 
     offerings = []
+    # The model stubs are written last, once the whole page has been read:
+    # a source that fails half way writes nothing.
+    stubs = []
     for name, info in by_name.items():
         rows = prices.get(name)
         if not rows:
-            print(f"warning: OpenCode Go lists {name} with no price", file=sys.stderr)
-            continue
-        base_row = rows[0][1]
+            raise ParseError(f"OpenCode Go: {name!r} has an endpoint but no price")
+        bases = [entry for _, kind, entry in rows if kind == "base"]
+        if len(bases) != 1:
+            raise ParseError(f"OpenCode Go: {name!r} has {len(bases)} base prices, want exactly one")
+        base_row = bases[0]
         tiers, peaks = [], []
-        for qualifier, entry in rows:
-            if qualifier.lower() == "peak" and peak:
+        for qualifier, kind, entry in rows:
+            values = {k: v for k, v in entry.items() if v is not None}
+            if kind == "peak":
                 peaks.append({"hours": [h for h in peak.groups() if h], "timezone": "UTC",
-                              "days": ["mon", "tue", "wed", "thu", "fri"],
-                              **{k: v for k, v in entry.items() if v is not None}})
-            elif qualifier.lower() == "off-peak":
-                base_row = entry
-            elif m := re.match(r">\s*([0-9]+)K", qualifier):
-                tiers.append({"above_input_tokens": int(m.group(1)) * 1000, **{k: v for k, v in entry.items() if v is not None}})
-            elif re.match(r"[≤<]", qualifier):
-                base_row = entry
+                              "days": ["mon", "tue", "wed", "thu", "fri"], **values})
+            elif kind == "tier":
+                above = int(re.match(r"^>\s*([0-9]+)K", qualifier).group(1)) * 1000
+                tiers.append({"above_input_tokens": above, **values})
         old = old_offerings.get(info["model_id"], {})
         price_values = dict(base_row)
         if tiers:
@@ -298,32 +412,32 @@ def scrape_opencode_go(today):
             if key in old:
                 offering[key] = old[key]
         offerings.append(offering)
-        ensure_model(offering["model"], name, vendor_of(info["model_id"]))
+        stubs.append((offering["model"], name, vendor_of(info["model_id"])))
 
     plans = []
     old_plans = {p["id"]: p for p in provider.get("plans") or []}
     plan_prices = {}
     for table in tables:
         if columns(table)[:2] == ["Plan", "Price"]:
-            for row in as_dicts(table):
+            for row in as_dicts(table, ["Plan", "Price"]):
                 if "Price" in row:
                     plan_prices[row["Plan"].lower().replace(" ", "-")] = row["Price"]
     offered = {o["model_id"] for o in offerings}
     for plan_id, monthly in limits.items():
         budgets = {}
-        for name, limit in monthly.items():
+        for name, monthly_limit in monthly.items():
             info = by_name.get(name)
             if info is None or info["model_id"] not in offered:
                 continue
-            budgets[info["model_id"]] = limit
+            budgets[info["model_id"]] = monthly_limit
         constraints = []
         for label, duration, share in (("5h", "5h", 0.2), ("weekly", "168h", 0.5), ("monthly", "720h", 1.0)):
             constraints.append({
                 "kind": "rolling_window", "label": label, "duration": duration, "scope": "model",
                 "model_budgets": {m: ({} if v is None else {"value_budget": round(v * share, 2)}) for m, v in budgets.items()},
             })
-        price = plan_prices.get(plan_id)
-        amount = money(price) if price else None
+        price_text = plan_prices.get(plan_id)
+        amount = money(price_text) if price_text else None
         plan = {"id": plan_id, "name": plan_id.replace("-", " ").title().replace("Go ", "Go "), "constraints": constraints}
         if amount is not None:
             plan["price"] = {"amount": amount, "period": "month"}
@@ -335,6 +449,8 @@ def scrape_opencode_go(today):
                                    "A model listed with no budget is free for a limited time.")
         plans.append({"id": plan_id, "name": (old or {}).get("name") or plan["name"], **{k: v for k, v in stamped.items()}})
 
+    for stub in stubs:
+        ensure_model(*stub)
     write_yaml(provider_path, {
         "id": "opencode-go",
         "name": "OpenCode Go",
@@ -352,14 +468,20 @@ def scrape_opencode_go(today):
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 
-def scrape_openrouter(today):
+def scrape_openrouter(today, document=None):
     """Refreshes the offerings already in providers/openrouter.yaml: OpenRouter
     serves hundreds of models, the catalog keeps those someone added."""
     path = ROOT / "providers" / "openrouter.yaml"
     if not path.exists():
         return
     provider = load_yaml(path)
-    listed = {m["id"]: m for m in json.loads(fetch(OPENROUTER_MODELS_URL))["data"]}
+    try:
+        data = json.loads(document if document is not None else fetch(OPENROUTER_MODELS_URL))["data"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise ParseError(f"OpenRouter: unreadable model list: {error}") from error
+    if not isinstance(data, list) or len(data) < 50:
+        raise ParseError(f"OpenRouter: a model list of {len(data) if isinstance(data, list) else '?'} entries is not the full list")
+    listed = {m["id"]: m for m in data if isinstance(m, dict) and "id" in m}
     stamp = Stamp(today, OPENROUTER_MODELS_URL)
 
     offerings = []
@@ -371,16 +493,29 @@ def scrape_openrouter(today):
             continue
         pricing = m.get("pricing") or {}
 
-        def per_million(key):
+        def per_million(key, required=False):
             value = pricing.get(key)
-            return round(float(value) * 1_000_000, 6) if value not in (None, "", "-1") else None
+            if value in (None, ""):
+                if required:
+                    raise ParseError(f"OpenRouter: {old['model_id']} has no {key} price")
+                return None
+            try:
+                amount = float(value)
+            except (TypeError, ValueError):
+                raise ParseError(f"OpenRouter: {old['model_id']} has an unreadable {key} price {value!r}")
+            # A negative price is OpenRouter's "varies": no figure to keep.
+            if amount < 0:
+                if required:
+                    raise ParseError(f"OpenRouter: {old['model_id']} has no fixed {key} price")
+                return None
+            return round(amount * 1_000_000, 6)
 
         offering = dict(old)
         offering["prices"] = stamp.merge(old.get("prices"), {
-            "input": per_million("prompt"),
+            "input": per_million("prompt", required=True),
             "cached_input": per_million("input_cache_read"),
             "cache_write": per_million("input_cache_write"),
-            "output": per_million("completion"),
+            "output": per_million("completion", required=True),
         })
         top = m.get("top_provider") or {}
         if m.get("context_length"):
