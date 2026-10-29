@@ -9,9 +9,9 @@ offerings:
 - model: deepseek-v4-pro
   model_id: deepseek/deepseek-v4-pro
   prices:
-    input: 0.95526
-    cached_input: 0.079605
-    output: 1.91052
+    input: 0.894012
+    cached_input: 0.074501
+    output: 1.788024
     status: published
     source: https://openrouter.ai/api/v1/models
     date: '2026-10-29'
