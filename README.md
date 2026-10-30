@@ -69,11 +69,12 @@ plans:
   - kind: rolling_window
     label: 5h
     duration: 5h
-    scope: model
-    model_budgets: {deepseek-v4.1-flash: {value_budget: 16.0}, beam-free: {}}
+    scope: shared
+    value_budget: 3.0
+    model_budgets: {deepseek-v4.1-flash: {value_budget: 16.0}, glm-5.3: {value_budget: 3.0}, beam-free: {}}
 ```
 
-Plan constraints use the vocabulary of Xolo's subscription plans: rolling windows with a token or value budget (in the provider's currency), counted per provider or per model, with per-model overrides, and concurrency limits.
+Plan constraints use the vocabulary of Xolo's subscription plans: rolling windows with a token or value budget (in the provider's currency), and concurrency limits. A window is counted for the whole provider (`provider`), per model with a budget each (`model`), or once for every model with each model weighing by its own budget (`shared`): spending a model's whole budget then fills the window. OpenCode Go meters its windows that way.
 
 ## Daily refresh
 
@@ -82,6 +83,7 @@ The prices, model lists and plan limits a provider publishes change often. `tool
 | Source | Reads | Refreshes |
 | --- | --- | --- |
 | `opencode-go` | the tables of https://opencode.ai/docs/go/ | offerings, API types, prices (tiers and peak hours included), plans and their per-model budgets; adds the models OpenCode Go starts serving |
+| `mistral` | the model cards of https://docs.mistral.ai/models | the models served through chat completions or embeddings and priced in tokens (base, cached and output prices, context size); retired, deprecated and non-token models are left out |
 | `openrouter` | https://openrouter.ai/api/v1/models | prices and windows of the offerings already in `providers/openrouter.yaml` |
 
 A value that did not change keeps its date, unless it is older than 30 days, when it is confirmed with the day's date. The `refresh` workflow runs it daily and opens one pull request when a provider changed something: a maintainer checks it against the sources before it is merged and released. A model a provider starts serving gets a file with its name and vendor only. Its windows, capabilities and parameter counts are left for a contributor to source, as no scraper can read them reliably from heterogeneous vendor pages.

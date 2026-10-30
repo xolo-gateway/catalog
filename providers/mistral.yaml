@@ -1,0 +1,176 @@
+id: mistral
+name: Mistral AI
+website: https://mistral.ai
+currency: USD
+xolo:
+  type: mistral
+  base_url: https://api.mistral.ai/v1
+offerings:
+- model: codestral-2508
+  model_id: codestral-2508
+  prices:
+    input: 0.3
+    output: 0.9
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+- model: codestral-embed-2505
+  model_id: codestral-embed-2505
+  prices:
+    input: 0.15
+    output: 0.0
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+- model: deepseek-v4.1-flash
+  model_id: deepseek-v4-1-flash-1017
+  prices:
+    input: 0.3
+    output: 1.2
+    cached_input: 0.007
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 1048576
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: ministral-14b-2512
+  model_id: ministral-14b-2512
+  prices:
+    input: 0.2
+    output: 0.2
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: ministral-3b-2512
+  model_id: ministral-3b-2512
+  prices:
+    input: 0.1
+    output: 0.1
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: ministral-8b-2512
+  model_id: ministral-8b-2512
+  prices:
+    input: 0.15
+    output: 0.15
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: mistral-embed-2312
+  model_id: mistral-embed-2312
+  prices:
+    input: 0.1
+    output: 0.0
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+- model: mistral-large-2512
+  model_id: mistral-large-2512
+  prices:
+    input: 0.5
+    output: 1.5
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: mistral-large-4
+  model_id: mistral-large-4
+  prices:
+    input: 0.7
+    output: 2.1
+    cached_input: 0.07
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 1048576
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: mistral-medium-3-5
+  model_id: mistral-medium-3-5
+  prices:
+    input: 1.5
+    output: 7.5
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: mistral-small-2603
+  model_id: mistral-small-2603
+  prices:
+    input: 0.15
+    output: 0.6
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: glm-5.3
+  model_id: zai-glm-5-3
+  prices:
+    input: 1.4
+    output: 4.4
+    cached_input: 0.14
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 1048576
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: glm-5.3-flash
+  model_id: zai-glm-5-3-flash
+  prices:
+    input: 0.15
+    output: 0.5
+    cached_input: 0.03
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 1048576
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.

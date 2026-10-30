@@ -266,7 +266,7 @@ VENDORS = {
     "glm": "Z.ai", "kimi": "Moonshot AI", "longcat": "Meituan", "step": "StepFun",
     "mimo": "Xiaomi", "minimax": "MiniMax", "qwen": "Alibaba Cloud", "deepseek": "DeepSeek",
     "hy": "Tencent", "grok": "xAI", "gpt": "OpenAI", "claude": "Anthropic", "gemini": "Google",
-    "muse": "Muse", "beam": "Beam", "iceman": "Iceman",
+    "muse": "Muse", "beam": "Beam", "iceman": "Iceman", "zai": "Z.ai",
 }
 
 
@@ -430,10 +430,18 @@ def scrape_opencode_go(today, page=None):
             if info is None or info["model_id"] not in offered:
                 continue
             budgets[info["model_id"]] = monthly_limit
+        # OpenCode Go meters one window per period, each model filling it at
+        # its own rate: the window holds the plan's most common monthly limit,
+        # and each model weighs by its own limit (a shared window).
+        limited = [v for v in budgets.values() if v is not None]
+        if not limited:
+            raise ParseError(f"OpenCode Go: plan {plan_id!r} lists no limited model")
+        reference = max(limited, key=lambda v: (limited.count(v), v))
         constraints = []
         for label, duration, share in (("5h", "5h", 0.2), ("weekly", "168h", 0.5), ("monthly", "720h", 1.0)):
             constraints.append({
-                "kind": "rolling_window", "label": label, "duration": duration, "scope": "model",
+                "kind": "rolling_window", "label": label, "duration": duration, "scope": "shared",
+                "value_budget": round(reference * share, 2),
                 "model_budgets": {m: ({} if v is None else {"value_budget": round(v * share, 2)}) for m, v in budgets.items()},
             })
         price_text = plan_prices.get(plan_id)
@@ -444,7 +452,8 @@ def scrape_opencode_go(today, page=None):
         old = old_plans.get(plan_id)
         stamped = stamp.merge(old and {k: old.get(k) for k in ("constraints", "price") if k in old} | {"date": old.get("date"), "source": old.get("source")},
                               {k: plan[k] for k in ("constraints", "price") if k in plan},
-                              note="The 5-hour, weekly and monthly budgets are 20%, 50% and 100% of each model's published monthly limit. "
+                              note="Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its published monthly limit "
+                                   "for the 5-hour, weekly and monthly windows. The window's own budget is the plan's most common monthly limit, at the same share. "
                                    "The page does not say whether the windows slide or reset on a schedule, and \"monthly\" is approximated as 720 hours. "
                                    "A model listed with no budget is free for a limited time.")
         plans.append({"id": plan_id, "name": (old or {}).get("name") or plan["name"], **{k: v for k, v in stamped.items()}})
@@ -527,19 +536,228 @@ def scrape_openrouter(today, document=None):
     write_yaml(path, provider)
 
 
+# ── Mistral ──────────────────────────────────────────────────────────────────
+
+MISTRAL_DOCS = "https://docs.mistral.ai"
+MISTRAL_INDEX_URL = MISTRAL_DOCS + "/models/model-cards/mistral-medium-3-5-26-04"
+MISTRAL_CARD_URL = MISTRAL_DOCS + "/models/model-cards/{}"
+MISTRAL_SOURCE = MISTRAL_DOCS + "/models"
+# Fewer priced models than this means a page read wrong, not a catalog that
+# shrank overnight.
+MISTRAL_MIN_PRICED = 10
+# The third-party models Mistral hosts, by its API name, and the catalog
+# model each one is: their figures are already sourced there.
+MISTRAL_HOSTED = {
+    "zai-glm-5-3": "glm-5.3",
+    "zai-glm-5-3-flash": "glm-5.3-flash",
+    "deepseek-v4-1-flash-1017": "deepseek-v4.1-flash",
+}
+
+
+def next_payload(page):
+    """The data a Next.js page streams to the browser (self.__next_f), as
+    one text: the docs' cards carry their figures there, as JSON."""
+    decoder = json.JSONDecoder()
+    chunks = []
+    marker = "self.__next_f.push("
+    at = page.find(marker)
+    while at >= 0:
+        try:
+            pushed, _ = decoder.raw_decode(page, at + len(marker))
+        except ValueError as error:
+            raise ParseError(f"unreadable Next.js payload: {error}") from error
+        # [1, "text"] carries the payload; other pushes set up the stream.
+        if isinstance(pushed, list) and len(pushed) == 2 and pushed[0] == 1 and isinstance(pushed[1], str):
+            chunks.append(pushed[1])
+        at = page.find(marker, at + len(marker))
+    if not chunks:
+        raise ParseError("the page streams no Next.js payload")
+    return "".join(chunks)
+
+
+def json_after(payload, marker, opening):
+    """Decodes the JSON value that follows marker, which must start with
+    opening ('[' or '{')."""
+    i = payload.find(marker)
+    if i < 0:
+        raise ParseError(f"no {marker!r} in the page")
+    rest = payload[i + len(marker):]
+    if not rest.startswith(opening):
+        raise ParseError(f"{marker!r} is not followed by {opening!r}")
+    try:
+        value, _ = json.JSONDecoder().raw_decode(rest)
+    except ValueError as error:
+        raise ParseError(f"unreadable JSON after {marker!r}: {error}") from error
+    return value
+
+
+def mistral_cards(index_page):
+    """The slugs and titles of the model cards the docs' navigation lists."""
+    cards = json_after(next_payload(index_page), '"metadata":{"label":"Model Cards"},"children":', "[")
+    listed = []
+    for card in cards:
+        slug = (card.get("slug") or [None])[-1]
+        title = (card.get("metadata") or {}).get("title")
+        if not slug or not title or not re.match(r"^[a-z0-9][a-z0-9.-]*$", slug):
+            raise ParseError(f"Mistral: unreadable model card entry {card!r}")
+        listed.append((slug, title))
+    if len(listed) < 20:
+        raise ParseError(f"Mistral: {len(listed)} model cards is not the full list")
+    return listed
+
+
+TOKEN_COUNT = re.compile(r"^([0-9]+(?:\.[0-9]+)?)([kKmM])$")
+
+
+def context_tokens(text):
+    """A card's context size: '256k' → 262144, '1M' → 1048576."""
+    m = TOKEN_COUNT.match(text.strip())
+    if not m:
+        raise ParseError(f"unreadable context size {text!r}")
+    unit = 1024 if m.group(2).lower() == "k" else 1024 * 1024
+    return int(float(m.group(1)) * unit)
+
+
+def mistral_card(page, slug):
+    """What one card states: the model's API names, whether it is retired,
+    its token prices and its context size. None for a card Xolo cannot
+    import as a priced model (retired, or not priced in input and output
+    tokens), which is left out."""
+    payload = next_payload(page)
+    # A retired or deprecated model's card carries a badge saying so: no
+    # longer one to import, whatever else the card states.
+    if '"children":"Retired"' in payload or '"children":"Deprecated"' in payload:
+        return None
+    names = json_after(payload, '{"names":', "[")
+    # A card without an API name describes a model the API does not serve.
+    if names == []:
+        return None
+    if not all(isinstance(n, str) and re.match(r"^[a-z0-9][a-z0-9.-]*$", n) for n in names):
+        raise ParseError(f"Mistral {slug}: unreadable model names {names!r}")
+    i = payload.find('{"pricing":{')
+    if i < 0:
+        raise ParseError(f"Mistral {slug}: the card states no price")
+    card = json_after(payload[i:], '{"pricing":', "{")
+    retired = re.search(r'"isRetired":(true|false)', payload[i:])
+    if not retired:
+        raise ParseError(f"Mistral {slug}: the card does not say whether the model is retired")
+    if retired.group(1) == "true":
+        return None
+
+    # The API a model is called through decides what Xolo can import: chat
+    # completions, or embeddings priced on input only.
+    if "/v1/chat/completions" in payload:
+        kind = "completion"
+    elif "/v1/embeddings" in payload:
+        kind = "embeddings"
+    else:
+        return None
+
+    def token_prices(side):
+        """The token prices of one side, by label: an unlabelled single
+        entry is the side's own price. None when the side is priced in
+        anything but tokens, or under a label Xolo does not know."""
+        prices = {}
+        for entry in card.get(side) or []:
+            if entry.get("denominator") != "/M Tokens":
+                return None
+            value = entry.get("price")
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+                raise ParseError(f"Mistral {slug}: unreadable {side} price {entry!r}")
+            label = (entry.get("label") or side).strip().lower()
+            if label not in (side, "cached input") or label in prices:
+                return None
+            prices[label] = float(value)
+        return prices
+
+    if card.get("free") is True:
+        prices = {"input": 0.0, "output": 0.0}
+    else:
+        inputs, outputs = token_prices("input"), token_prices("output")
+        if inputs is None or outputs is None or "input" not in inputs:
+            return None
+        if kind == "completion" and "output" not in outputs:
+            return None
+        prices = {"input": inputs["input"], "output": outputs.get("output", 0.0)}
+        if "cached input" in inputs:
+            prices["cached_input"] = inputs["cached input"]
+
+    # Not every card states a context size: an absent one is left unknown,
+    # one that is there must read.
+    context = None
+    if '"contextSize"' in payload:
+        m = re.search(r'"contextSize",\{[^{}]*"children":\["\$","span",null,\{[^{}]*"children":"([^"]+)"', payload)
+        if not m:
+            raise ParseError(f"Mistral {slug}: unreadable context size")
+        context = context_tokens(m.group(1))
+    return {"names": names, "prices": prices, "context": context, "kind": kind}
+
+
+def scrape_mistral(today, pages=None, index=None):
+    """Refreshes the models Mistral's docs list as priced in tokens. pages
+    and index, for the tests, give the cards by URL and the page holding
+    the navigation."""
+    get = (lambda url: pages[url]) if pages is not None else fetch
+    stamp = Stamp(today, MISTRAL_SOURCE)
+    path = ROOT / "providers" / "mistral.yaml"
+    old_offerings = {}
+    if path.exists():
+        old_offerings = {o["model_id"]: o for o in load_yaml(path).get("offerings") or []}
+
+    offerings, stubs, seen = [], [], set()
+    for slug, title in mistral_cards(index if index is not None else get(MISTRAL_INDEX_URL)):
+        if pages is None:
+            time.sleep(0.5)
+        card = mistral_card(get(MISTRAL_CARD_URL.format(slug)), slug)
+        if card is None:
+            continue
+        model_id = card["names"][0]
+        if model_id in seen:
+            raise ParseError(f"Mistral: {model_id} is listed by two cards")
+        seen.add(model_id)
+        old = old_offerings.get(model_id, {})
+        offering = {
+            "model": old.get("model") or MISTRAL_HOSTED.get(model_id, model_id),
+            "model_id": model_id,
+            "prices": stamp.merge(old.get("prices"), card["prices"]),
+        }
+        if card["context"] is not None:
+            offering["context_window"] = stamp.merge(old.get("context_window"), {"value": card["context"]},
+                                                     note="The card states the size in k tokens, read as multiples of 1024.")
+        offerings.append(offering)
+        stubs.append((offering["model"], title, vendor_of(model_id) if vendor_of(model_id) != "Unknown" else "Mistral AI", card["kind"]))
+    if len(offerings) < MISTRAL_MIN_PRICED:
+        raise ParseError(f"Mistral: {len(offerings)} priced models is not the full list")
+
+    for stub in stubs:
+        ensure_model(*stub)
+    write_yaml(path, {
+        "id": "mistral",
+        "name": "Mistral AI",
+        "website": "https://mistral.ai",
+        "currency": "USD",
+        "xolo": {"type": "mistral", "base_url": "https://api.mistral.ai/v1"},
+        "offerings": sorted(offerings, key=lambda o: o["model_id"]),
+    })
+
+
 # ── Models ───────────────────────────────────────────────────────────────────
 
 
-def ensure_model(model_id, name, vendor):
+def ensure_model(model_id, name, vendor, kind="completion"):
     """Creates the stub of a model the catalog does not know yet."""
     path = ROOT / "models" / f"{model_id}.yaml"
     if path.exists():
         return
-    write_yaml(path, {"id": model_id, "name": name, "vendor": vendor})
+    stub = {"id": model_id, "name": name, "vendor": vendor}
+    if kind != "completion":
+        stub["kind"] = kind
+    write_yaml(path, stub)
 
 
 SOURCES = {
     "opencode-go": scrape_opencode_go,
+    "mistral": scrape_mistral,
     "openrouter": scrape_openrouter,
 }
 
