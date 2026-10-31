@@ -47,10 +47,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "$(git tag --points-at HEAD --list 'v*')" ]; then
-            echo "::notice::HEAD is already released, nothing published."
-            exit 0
-          fi
+          # A tag alone is not a release: one pushed by hand publishes
+          # nothing, so HEAD is released only when one of its tags carries a
+          # published release.
+          for t in $(git tag --points-at HEAD --list 'v*'); do
+            if [ "$(gh release view "$t" --json isDraft --jq .isDraft 2>/dev/null)" = false ]; then
+              echo "::notice::HEAD is already released as $t, nothing published."
+              exit 0
+            fi
+          done
           # The release date in UTC, vYYYY.M.D, then vYYYY.M.D.2, .3 and so
           # on for the later releases of the same day. A name is taken by a
           # tag, or by a published release whose tag was deleted; a draft
