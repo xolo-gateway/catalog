@@ -9,22 +9,22 @@ offerings:
 - model: deepseek-v4-pro
   model_id: deepseek/deepseek-v4-pro
   prices:
-    input: 0.816234
-    cached_input: 0.068019
-    output: 1.632468
+    input: 1.6
+    cached_input: 0.135
+    output: 3.2
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-30'
+    date: '2026-10-31'
   context_window:
     value: 1048576
     status: published
     source: https://openrouter.ai/api/v1/models
     date: '2026-10-29'
   output_window:
-    value: 384000
+    value: 393216
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-29'
+    date: '2026-10-31'
 - model: deepseek-v4.1-flash
   model_id: deepseek/deepseek-v4.1-flash
   prices:
@@ -162,12 +162,12 @@ offerings:
 - model: kimi-k2.7-code
   model_id: moonshotai/kimi-k2.7-code
   prices:
-    input: 0.56
+    input: 0.6
     cached_input: 0.15
-    output: 3.1
+    output: 3.5
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-29'
+    date: '2026-10-31'
   context_window:
     value: 262144
     status: published
@@ -452,10 +452,10 @@ offerings:
   prices:
     input: 0.006
     cached_input: 0.005
-    output: 7.0
+    output: 6.8
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-29'
+    date: '2026-10-31'
   context_window:
     value: 1048576
     status: published
@@ -469,12 +469,12 @@ offerings:
 - model: glm-5.3
   model_id: z-ai/glm-5.3
   prices:
-    input: 0.08
-    cached_input: 0.076
-    output: 3.6
+    input: 0.0699
+    cached_input: 0.0689
+    output: 1.4
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-30'
+    date: '2026-10-31'
   context_window:
     value: 1048576
     status: published
@@ -488,19 +488,19 @@ offerings:
 - model: glm-5.3-flash
   model_id: z-ai/glm-5.3-flash
   prices:
-    input: 0.15
-    cached_input: 0.03
-    output: 0.5
+    input: 0.0163
+    cached_input: 0.0163
+    output: 0.1479
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-30'
+    date: '2026-10-31'
   context_window:
     value: 1048576
     status: published
     source: https://openrouter.ai/api/v1/models
     date: '2026-10-29'
   output_window:
-    value: 943717
+    value: 131072
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-30'
+    date: '2026-10-31'

@@ -56,7 +56,7 @@ plans:
       qwen3.7-plus:
         value_budget: 12.0
       deepseek-v4.1-flash:
-        value_budget: 16.0
+        value_budget: 20.0
       deepseek-v4-pro:
         value_budget: 3.0
       hy4-preview:
@@ -120,7 +120,7 @@ plans:
       qwen3.7-plus:
         value_budget: 30.0
       deepseek-v4.1-flash:
-        value_budget: 40.0
+        value_budget: 50.0
       deepseek-v4-pro:
         value_budget: 7.5
       hy4-preview:
@@ -184,7 +184,7 @@ plans:
       qwen3.7-plus:
         value_budget: 60.0
       deepseek-v4.1-flash:
-        value_budget: 80.0
+        value_budget: 100.0
       deepseek-v4-pro:
         value_budget: 15.0
       hy4-preview:
@@ -206,7 +206,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-29'
+  date: '2026-10-31'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
@@ -262,7 +262,7 @@ plans:
       qwen3.7-plus:
         value_budget: 36.0
       deepseek-v4.1-flash:
-        value_budget: 32.0
+        value_budget: 40.0
       deepseek-v4-pro:
         value_budget: 12.0
       hy4-preview:
@@ -326,7 +326,7 @@ plans:
       qwen3.7-plus:
         value_budget: 90.0
       deepseek-v4.1-flash:
-        value_budget: 80.0
+        value_budget: 100.0
       deepseek-v4-pro:
         value_budget: 30.0
       hy4-preview:
@@ -390,7 +390,7 @@ plans:
       qwen3.7-plus:
         value_budget: 180.0
       deepseek-v4.1-flash:
-        value_budget: 160.0
+        value_budget: 200.0
       deepseek-v4-pro:
         value_budget: 60.0
       hy4-preview:
@@ -412,7 +412,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-29'
+  date: '2026-10-31'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
@@ -468,7 +468,7 @@ plans:
       qwen3.7-plus:
         value_budget: 13.0
       deepseek-v4.1-flash:
-        value_budget: 17.0
+        value_budget: 21.0
       deepseek-v4-pro:
         value_budget: 4.0
       hy4-preview:
@@ -532,7 +532,7 @@ plans:
       qwen3.7-plus:
         value_budget: 32.5
       deepseek-v4.1-flash:
-        value_budget: 42.5
+        value_budget: 52.5
       deepseek-v4-pro:
         value_budget: 10.0
       hy4-preview:
@@ -596,7 +596,7 @@ plans:
       qwen3.7-plus:
         value_budget: 65.0
       deepseek-v4.1-flash:
-        value_budget: 85.0
+        value_budget: 105.0
       deepseek-v4-pro:
         value_budget: 20.0
       hy4-preview:
@@ -618,7 +618,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-29'
+  date: '2026-10-31'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
