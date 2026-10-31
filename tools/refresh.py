@@ -484,8 +484,8 @@ OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_ENDPOINTS_URL = "https://openrouter.ai/api/v1/models/{}/endpoints"
 OPENROUTER_PRICES_NOTE = (
     "Median of the prices of the providers OpenRouter serves this model through at "
-    "the standard tier, those without a current incident (all of them when every one "
-    "has one); a cache price only when at least half of them state one. A request is "
+    "the standard tier (every tier when it has none), those without a current incident "
+    "(all of them when every one has one); a cache price only when at least half of them state one. A request is "
     "billed at the price of the provider it reaches, cheaper or dearer: the price the "
     "model list shows is one provider's, and moves whenever a provider comes, goes or "
     "runs a discount."
@@ -505,9 +505,10 @@ def openrouter_median_prices(model_id, document):
     # A flex or priority tier is reached only by a request asking for it.
     endpoints = [e for e in endpoints if isinstance(e, dict)]
     endpoints = [e for e in endpoints if e.get("service_tier") in (None, "", "standard")] or endpoints
-    # Without a status, the incident filter would turn itself off unseen.
-    if not any(isinstance(e, dict) and type(e.get("status")) is int for e in endpoints):
-        raise ParseError(f"OpenRouter: no provider of {model_id} states its status")
+    # Without a status, the incident filter would turn itself off, or keep
+    # only the few providers still stating one, unseen.
+    if not all(type(e.get("status")) is int for e in endpoints):
+        raise ParseError(f"OpenRouter: a provider of {model_id} states no status")
     healthy = [e for e in endpoints if isinstance(e, dict) and e.get("status") == 0]
     # Every provider in trouble at once still has prices worth reading.
     endpoints = healthy or [e for e in endpoints if isinstance(e, dict)]

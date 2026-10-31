@@ -209,10 +209,23 @@ class OpenRouterTest(CatalogCopy):
         prices = refresh.openrouter_median_prices("m", json.dumps(doc))
         self.assertEqual((prices["input"], prices["output"]), (2.1, 10.5))
 
+    def test_a_model_with_no_standard_tier_is_priced_at_every_tier(self):
+        doc = json.loads(openrouter_endpoints((1, 5), (3, 15)))
+        for e, tier in zip(doc["data"]["endpoints"], ("flex", "priority")):
+            e["service_tier"] = tier
+        prices = refresh.openrouter_median_prices("m", json.dumps(doc))
+        self.assertEqual((prices["input"], prices["output"]), (2.0, 10.0))
+
     def test_refuses_providers_without_a_status(self):
         doc = json.loads(openrouter_endpoints((1, 4), (2, 5)))
         for e in doc["data"]["endpoints"]:
             del e["status"]
+        with self.assertRaises(refresh.ParseError):
+            refresh.openrouter_median_prices("m", json.dumps(doc))
+
+    def test_refuses_a_provider_without_a_status_among_others(self):
+        doc = json.loads(openrouter_endpoints((1, 4), (2, 5), (3, 6)))
+        doc["data"]["endpoints"][1]["status"] = "0"
         with self.assertRaises(refresh.ParseError):
             refresh.openrouter_median_prices("m", json.dumps(doc))
 
