@@ -9,12 +9,17 @@ name: publish
 #
 # The release is built here rather than by the tag workflow: a tag created
 # with the workflow's own token starts no other workflow.
+#
+# A change outside the data, to tools/ or schema/, is released by running
+# this workflow by hand, so that the name is still chosen in the publish
+# queue rather than by a tag pushed alongside an automatic release.
 on:
   push:
     branches: [main]
     paths:
       - "models/**"
       - "providers/**"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,6 +30,8 @@ concurrency:
 
 jobs:
   publish:
+    # A run by hand can target any branch: only main is released.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
