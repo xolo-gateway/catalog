@@ -125,6 +125,8 @@ https://github.com/xolo-gateway/catalog/releases/latest/download/catalog.json
 
 Its `version` is the tag, so that Xolo can record which release a model was imported from.
 
+Xolo reads the latest release only, and follows a model's values only when the release's version differs from the one the model was imported with. So every push to `main` that changes `models/` or `providers/` publishes a release on its own (`.github/workflows/publish.yml`), whether it is a daily refresh merged on its own or a pull request merged by a maintainer. A release is named after its date in UTC, `vYYYY.M.D`, then `vYYYY.M.D.2`, `vYYYY.M.D.3` and so on for the later releases of the same day. A change outside `models/` and `providers/`, to `tools/` or `schema/` for instance, publishes nothing: a maintainer releases it by running the same workflow by hand, from the Actions tab or with `gh workflow run publish.yml`. Pushing a tag by hand is no longer needed, and could take the name an automatic release has just chosen.
+
 ## License
 
 The catalog is made available under the [Open Database License (ODbL) 1.0](LICENSE). You may use, share and adapt it, provided you attribute it to the Xolo model catalog and share a database adapted from it under the same license. The scripts in `tools/` are under the same terms.
