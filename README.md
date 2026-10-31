@@ -84,7 +84,7 @@ The prices, model lists and plan limits a provider publishes change often. `tool
 | --- | --- | --- |
 | `opencode-go` | the tables of https://opencode.ai/docs/go/ | offerings, API types, prices (tiers and peak hours included), plans and their per-model budgets; adds the models OpenCode Go starts serving |
 | `mistral` | the model cards of https://docs.mistral.ai/models | the models served through chat completions or embeddings and priced in tokens (base, cached and output prices, context size); retired, deprecated and non-token models are left out |
-| `openrouter` | https://openrouter.ai/api/v1/models | prices and windows of the offerings already in `providers/openrouter.yaml` |
+| `openrouter` | https://openrouter.ai/api/v1/models and each model's `/endpoints` | windows of the offerings already in `providers/openrouter.yaml`, and their prices: the median across the providers OpenRouter routes the model to, those without a current incident, marked `estimated`. The price the model list shows is one provider's, and moves by several times as providers come, go or run discounts |
 
 A value that did not change keeps its date, unless it is older than 30 days, when it is confirmed with the day's date. A model a provider starts serving gets a file with its name and vendor only: its windows, capabilities and parameter counts are left for a contributor to source, as no scraper can read them reliably from heterogeneous vendor pages.
 

@@ -109,32 +109,60 @@ class OpenCodeGoTest(CatalogCopy):
         self.assertEqual((self.root / "providers" / "opencode-go.yaml").read_text(), provider)
 
 
+def openrouter_endpoints(*prices, status=0):
+    """A model's providers as OpenRouter's API lists them, from (input,
+    output) prices per million tokens."""
+    return json.dumps({"data": {"endpoints": [
+        {"status": status, "pricing": {"prompt": str(i / 1e6), "completion": str(o / 1e6)}} for i, o in prices
+    ]}})
+
+
 class OpenRouterTest(CatalogCopy):
     def document(self):
         return json.loads((FIXTURES / "openrouter-models.json").read_text(encoding="utf-8"))
 
-    def test_refreshes_the_listed_offerings(self):
-        refresh.scrape_openrouter("2026-10-29", document=json.dumps(self.document()))
+    def scrape(self, document=None, endpoints=None):
+        refresh.scrape_openrouter(
+            "2026-10-29",
+            document=json.dumps(document or self.document()),
+            endpoints=endpoints or (lambda model_id: openrouter_endpoints((0.1, 0.5), (1.4, 4.4), (1.2, 4.0))),
+        )
+
+    def test_refreshes_the_listed_offerings_at_the_median_price(self):
+        self.scrape()
         offers = self.provider("openrouter")["offerings"]
         self.assertGreater(len(offers), 20)
         for o in offers:
-            self.assertGreaterEqual(o["prices"]["input"], 0)
+            self.assertEqual((o["prices"]["input"], o["prices"]["output"]), (1.2, 4.0))
+            self.assertEqual(o["prices"]["status"], "estimated")
+            self.assertIn("Median", o["prices"]["note"])
+            self.assertNotIn("cached_input", o["prices"])
+
+    def test_the_median_leaves_out_the_providers_in_trouble(self):
+        doc = json.loads(openrouter_endpoints((0.1, 0.5), (1.4, 4.4), (1.2, 4.0)))
+        doc["data"]["endpoints"] += json.loads(openrouter_endpoints((9, 9), (9, 9), (9, 9), status=-2))["data"]["endpoints"]
+        prices = refresh.openrouter_median_prices("m", json.dumps(doc))
+        self.assertEqual((prices["input"], prices["output"]), (1.2, 4.0))
+
+    def test_the_median_of_an_even_count_is_the_mean_of_the_middle_two(self):
+        prices = refresh.openrouter_median_prices("m", openrouter_endpoints((0.1, 0.5), (0.3, 1.5)))
+        self.assertEqual((prices["input"], prices["output"]), (0.2, 1.0))
 
     def test_refuses_an_unreadable_price(self):
-        doc = self.document()
-        listed = {o["model_id"] for o in self.provider("openrouter")["offerings"]}
-        for m in doc["data"]:
-            if m["id"] in listed:
-                m["pricing"]["prompt"] = "about a dollar"
-                break
         with self.assertRaises(refresh.ParseError):
-            refresh.scrape_openrouter("2026-10-29", document=json.dumps(doc))
+            refresh.openrouter_median_prices("m", json.dumps({"data": {"endpoints": [
+                {"status": 0, "pricing": {"prompt": "about a dollar", "completion": "0.000001"}},
+            ]}}))
+
+    def test_refuses_a_model_no_provider_serves(self):
+        with self.assertRaises(refresh.ParseError):
+            self.scrape(endpoints=lambda model_id: json.dumps({"data": {"endpoints": []}}))
 
     def test_refuses_a_truncated_list(self):
         doc = self.document()
         doc["data"] = doc["data"][:10]
         with self.assertRaises(refresh.ParseError):
-            refresh.scrape_openrouter("2026-10-29", document=json.dumps(doc))
+            self.scrape(document=doc)
 
 
 class GuardTest(unittest.TestCase):
