@@ -21,6 +21,7 @@ import html.parser
 import json
 import pathlib
 import re
+import statistics
 import sys
 import time
 import urllib.request
@@ -64,9 +65,9 @@ class ParseError(ValueError):
     nothing rather than a partial or misread result."""
 
 
-def fetch(url, attempts=3):
-    """Fetches url, retrying a transient failure. A non-200 answer or an
-    empty body is an error, never a page to parse."""
+def fetch(url, attempts=3, min_length=1000):
+    """Fetches url, retrying a transient failure. A non-200 answer or a
+    body shorter than min_length is an error, never a page to parse."""
     last = None
     for attempt in range(attempts):
         try:
@@ -75,7 +76,7 @@ def fetch(url, attempts=3):
                 if response.status != 200:
                     raise ParseError(f"{url}: status {response.status}")
                 body = response.read().decode("utf-8")
-            if len(body) < 1000:
+            if len(body) < min_length:
                 raise ParseError(f"{url}: suspiciously short answer ({len(body)} bytes)")
             return body
         except (OSError, ParseError) as error:
@@ -85,6 +86,9 @@ def fetch(url, attempts=3):
 
 
 # ── Provenance ───────────────────────────────────────────────────────────────
+
+
+PROVENANCE_KEYS = ("status", "source", "date", "note")
 
 
 class Stamp:
@@ -97,12 +101,14 @@ class Stamp:
 
     def merge(self, old, new, status="published", note=None):
         """Returns the block new (a dict of values) with its provenance:
-        the old block's date when the values did not change."""
+        the old block's date when the values did not change. A value that
+        appears or vanishes is a change too."""
         values = {k: v for k, v in new.items() if v is not None}
         block = dict(values)
         block["status"] = status
         block["source"] = self.source
-        unchanged = old is not None and all(old.get(k) == v for k, v in values.items()) and old.get("source") == self.source
+        old_values = {k: v for k, v in (old or {}).items() if k not in PROVENANCE_KEYS}
+        unchanged = old is not None and old_values == values and old.get("source") == self.source
         date = self.today
         if unchanged:
             try:
@@ -475,11 +481,77 @@ def scrape_opencode_go(today, page=None):
 # ── OpenRouter ───────────────────────────────────────────────────────────────
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
+OPENROUTER_ENDPOINTS_URL = "https://openrouter.ai/api/v1/models/{}/endpoints"
+OPENROUTER_PRICES_NOTE = (
+    "Median of the prices of the providers OpenRouter serves this model through at "
+    "the standard tier (every tier when it has none), those without a current incident "
+    "(all of them when every one has one); a cache price only when at least half of them state one. A request is "
+    "billed at the price of the provider it reaches, cheaper or dearer: the price the "
+    "model list shows is one provider's, and moves whenever a provider comes, goes or "
+    "runs a discount."
+)
 
 
-def scrape_openrouter(today, document=None):
+def openrouter_median_prices(model_id, document):
+    """The median of each price across the providers of model_id that have
+    no current incident, per million tokens. A field no provider prices is
+    None."""
+    try:
+        endpoints = json.loads(document)["data"]["endpoints"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise ParseError(f"OpenRouter: unreadable providers of {model_id}: {error}") from error
+    if not isinstance(endpoints, list) or not endpoints:
+        raise ParseError(f"OpenRouter: no provider serves {model_id}")
+    # A flex or priority tier is reached only by a request asking for it.
+    endpoints = [e for e in endpoints if isinstance(e, dict)]
+    endpoints = [e for e in endpoints if e.get("service_tier") in (None, "", "standard")] or endpoints
+    # Without a status, the incident filter would turn itself off, or keep
+    # only the few providers still stating one, unseen.
+    if not all(type(e.get("status")) is int for e in endpoints):
+        raise ParseError(f"OpenRouter: a provider of {model_id} states no status")
+    healthy = [e for e in endpoints if isinstance(e, dict) and e.get("status") == 0]
+    # Every provider in trouble at once still has prices worth reading.
+    endpoints = healthy or [e for e in endpoints if isinstance(e, dict)]
+
+    def median(key, required=False):
+        """A cache price stated by a few providers only would be theirs, not
+        the market's: it needs at least half of them."""
+        amounts = []
+        for e in endpoints:
+            value = (e.get("pricing") or {}).get(key)
+            if value in (None, ""):
+                continue
+            try:
+                amount = float(value)
+            except (TypeError, ValueError):
+                raise ParseError(f"OpenRouter: {model_id} has an unreadable {key} price {value!r}")
+            # A negative price is OpenRouter's "varies": no figure to keep.
+            if amount >= 0:
+                amounts.append(amount)
+        if not amounts:
+            if required:
+                raise ParseError(f"OpenRouter: {model_id} has no fixed {key} price")
+            return None
+        if not required and 2 * len(amounts) < len(endpoints):
+            return None
+        return round(statistics.median(amounts) * 1_000_000, 6)
+
+    return {
+        "input": median("prompt", required=True),
+        "cached_input": median("input_cache_read"),
+        "cache_write": median("input_cache_write"),
+        "output": median("completion", required=True),
+    }
+
+
+def scrape_openrouter(today, document=None, endpoints=None):
     """Refreshes the offerings already in providers/openrouter.yaml: OpenRouter
-    serves hundreds of models, the catalog keeps those someone added."""
+    serves hundreds of models, the catalog keeps those someone added.
+
+    OpenRouter is a market: a model is served by many providers, at prices
+    from one to ten times apart. Their median is the offering's price; the
+    model list gives the windows. endpoints(model_id) returns a model's
+    providers as OpenRouter's API does, for the tests."""
     path = ROOT / "providers" / "openrouter.yaml"
     if not path.exists():
         return
@@ -491,6 +563,11 @@ def scrape_openrouter(today, document=None):
     if not isinstance(data, list) or len(data) < 50:
         raise ParseError(f"OpenRouter: a model list of {len(data) if isinstance(data, list) else '?'} entries is not the full list")
     listed = {m["id"]: m for m in data if isinstance(m, dict) and "id" in m}
+    if endpoints is None:
+        def endpoints(model_id):
+            time.sleep(0.5)
+            # One provider's entry is about 1.5 kB: the floor of a page does not apply.
+            return fetch(OPENROUTER_ENDPOINTS_URL.format(model_id), min_length=100)
     stamp = Stamp(today, OPENROUTER_MODELS_URL)
 
     offerings = []
@@ -500,32 +577,10 @@ def scrape_openrouter(today, document=None):
             print(f"warning: OpenRouter no longer lists {old['model_id']}", file=sys.stderr)
             offerings.append(old)
             continue
-        pricing = m.get("pricing") or {}
-
-        def per_million(key, required=False):
-            value = pricing.get(key)
-            if value in (None, ""):
-                if required:
-                    raise ParseError(f"OpenRouter: {old['model_id']} has no {key} price")
-                return None
-            try:
-                amount = float(value)
-            except (TypeError, ValueError):
-                raise ParseError(f"OpenRouter: {old['model_id']} has an unreadable {key} price {value!r}")
-            # A negative price is OpenRouter's "varies": no figure to keep.
-            if amount < 0:
-                if required:
-                    raise ParseError(f"OpenRouter: {old['model_id']} has no fixed {key} price")
-                return None
-            return round(amount * 1_000_000, 6)
-
         offering = dict(old)
-        offering["prices"] = stamp.merge(old.get("prices"), {
-            "input": per_million("prompt", required=True),
-            "cached_input": per_million("input_cache_read"),
-            "cache_write": per_million("input_cache_write"),
-            "output": per_million("completion", required=True),
-        })
+        prices = Stamp(today, OPENROUTER_ENDPOINTS_URL.format(old["model_id"]))
+        offering["prices"] = prices.merge(old.get("prices"), openrouter_median_prices(old["model_id"], endpoints(old["model_id"])),
+                                          status="estimated", note=OPENROUTER_PRICES_NOTE)
         top = m.get("top_provider") or {}
         if m.get("context_length"):
             offering["context_window"] = stamp.merge(old.get("context_window"), {"value": int(m["context_length"])})
