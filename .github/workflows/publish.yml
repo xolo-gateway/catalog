@@ -1,0 +1,58 @@
+name: publish
+
+# Xolo reads the latest release only, and follows a model's prices only when
+# the release's version differs from the one the model was imported with:
+# data merged on main reaches no instance until it is released under a new
+# tag. So every push to main that changes the data, a daily refresh merged on
+# its own or a pull request merged by a maintainer, publishes the next patch
+# release.
+#
+# The release is built here rather than by the tag workflow: a tag created
+# with the workflow's own token starts no other workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "models/**"
+      - "providers/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tools/requirements.txt
+      - run: python tools/catalog.py validate --max-age-days 180
+      - name: Test the scrapers and the merge guard
+        run: python -m unittest discover -s tools
+      - name: Choose the next version
+        id: version
+        run: |
+          if [ -n "$(git tag --points-at HEAD --list 'v*')" ]; then
+            echo "HEAD is already released." >&2
+            exit 0
+          fi
+          latest="$(git tag --list 'v*.*.*' --sort=-v:refname | head -n 1)"
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          echo "tag=v${major:-0}.${minor:-1}.$(( ${patch:-0} + 1 ))" >> "$GITHUB_OUTPUT"
+      - name: Build the catalog
+        if: steps.version.outputs.tag
+        run: python tools/catalog.py build --version "${{ steps.version.outputs.tag }}" --output dist/catalog.json
+      - name: Publish the release
+        if: steps.version.outputs.tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh release create "$TAG" dist/catalog.json --target "$GITHUB_SHA" --title "$TAG" --notes "Catalog $TAG, licensed under the ODbL 1.0."
