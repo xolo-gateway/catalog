@@ -148,6 +148,30 @@ class OpenRouterTest(CatalogCopy):
         prices = refresh.openrouter_median_prices("m", openrouter_endpoints((0.1, 0.5), (0.3, 1.5)))
         self.assertEqual((prices["input"], prices["output"]), (0.2, 1.0))
 
+    def test_every_provider_in_trouble_still_gives_a_price(self):
+        prices = refresh.openrouter_median_prices("m", openrouter_endpoints((0.1, 0.5), (0.3, 1.5), (0.2, 1.0), status=-2))
+        self.assertEqual((prices["input"], prices["output"]), (0.2, 1.0))
+
+    def test_a_cache_price_needs_half_of_the_providers(self):
+        doc = json.loads(openrouter_endpoints((1, 4), (1, 4), (1, 4), (1, 4)))
+        for i, e in enumerate(doc["data"]["endpoints"]):
+            e["pricing"]["input_cache_read"] = str((0.1 + i * 0.1) / 1e6)
+        doc["data"]["endpoints"][0]["pricing"]["input_cache_write"] = str(2 / 1e6)
+        prices = refresh.openrouter_median_prices("m", json.dumps(doc))
+        self.assertEqual(prices["cached_input"], 0.25)
+        self.assertIsNone(prices["cache_write"])
+        doc["data"]["endpoints"][1]["pricing"]["input_cache_write"] = str(3 / 1e6)
+        self.assertEqual(refresh.openrouter_median_prices("m", json.dumps(doc))["cache_write"], 2.5)
+
+    def test_a_failing_provider_list_writes_nothing(self):
+        before = (self.root / "providers" / "openrouter.yaml").read_text()
+
+        def failing(model_id):
+            raise refresh.ParseError("status 429")
+        with self.assertRaises(refresh.ParseError):
+            self.scrape(endpoints=failing)
+        self.assertEqual((self.root / "providers" / "openrouter.yaml").read_text(), before)
+
     def test_refuses_an_unreadable_price(self):
         with self.assertRaises(refresh.ParseError):
             refresh.openrouter_median_prices("m", json.dumps({"data": {"endpoints": [
@@ -163,6 +187,18 @@ class OpenRouterTest(CatalogCopy):
         doc["data"] = doc["data"][:10]
         with self.assertRaises(refresh.ParseError):
             self.scrape(document=doc)
+
+
+class StampTest(unittest.TestCase):
+    def test_keeps_the_date_of_unchanged_values(self):
+        old = {"input": 1.0, "status": "published", "source": "https://a", "date": "2026-10-20"}
+        self.assertEqual(refresh.Stamp("2026-10-29", "https://a").merge(old, {"input": 1.0})["date"], "2026-10-20")
+
+    def test_a_vanishing_value_is_a_change(self):
+        old = {"input": 1.0, "cache_write": 2.0, "status": "published", "source": "https://a", "date": "2026-10-20"}
+        block = refresh.Stamp("2026-10-29", "https://a").merge(old, {"input": 1.0, "cache_write": None})
+        self.assertEqual(block["date"], "2026-10-29")
+        self.assertNotIn("cache_write", block)
 
 
 class GuardTest(unittest.TestCase):

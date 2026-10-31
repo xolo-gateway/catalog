@@ -65,9 +65,9 @@ class ParseError(ValueError):
     nothing rather than a partial or misread result."""
 
 
-def fetch(url, attempts=3):
-    """Fetches url, retrying a transient failure. A non-200 answer or an
-    empty body is an error, never a page to parse."""
+def fetch(url, attempts=3, min_length=1000):
+    """Fetches url, retrying a transient failure. A non-200 answer or a
+    body shorter than min_length is an error, never a page to parse."""
     last = None
     for attempt in range(attempts):
         try:
@@ -76,7 +76,7 @@ def fetch(url, attempts=3):
                 if response.status != 200:
                     raise ParseError(f"{url}: status {response.status}")
                 body = response.read().decode("utf-8")
-            if len(body) < 1000:
+            if len(body) < min_length:
                 raise ParseError(f"{url}: suspiciously short answer ({len(body)} bytes)")
             return body
         except (OSError, ParseError) as error:
@@ -86,6 +86,9 @@ def fetch(url, attempts=3):
 
 
 # ── Provenance ───────────────────────────────────────────────────────────────
+
+
+PROVENANCE_KEYS = ("status", "source", "date", "note")
 
 
 class Stamp:
@@ -98,12 +101,14 @@ class Stamp:
 
     def merge(self, old, new, status="published", note=None):
         """Returns the block new (a dict of values) with its provenance:
-        the old block's date when the values did not change."""
+        the old block's date when the values did not change. A value that
+        appears or vanishes is a change too."""
         values = {k: v for k, v in new.items() if v is not None}
         block = dict(values)
         block["status"] = status
         block["source"] = self.source
-        unchanged = old is not None and all(old.get(k) == v for k, v in values.items()) and old.get("source") == self.source
+        old_values = {k: v for k, v in (old or {}).items() if k not in PROVENANCE_KEYS}
+        unchanged = old is not None and old_values == values and old.get("source") == self.source
         date = self.today
         if unchanged:
             try:
@@ -479,7 +484,8 @@ OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_ENDPOINTS_URL = "https://openrouter.ai/api/v1/models/{}/endpoints"
 OPENROUTER_PRICES_NOTE = (
     "Median of the prices of the providers OpenRouter serves this model through, "
-    "those without a current incident. A request is billed at the price of the "
+    "those without a current incident (all of them when every one has one); a cache "
+    "price only when at least half of them state one. A request is billed at the price of the "
     "provider it reaches, cheaper or dearer: the price the model list shows is "
     "one provider's, and moves whenever a provider comes, goes or runs a discount."
 )
@@ -500,6 +506,8 @@ def openrouter_median_prices(model_id, document):
     endpoints = healthy or [e for e in endpoints if isinstance(e, dict)]
 
     def median(key, required=False):
+        """A cache price stated by a few providers only would be theirs, not
+        the market's: it needs at least half of them."""
         amounts = []
         for e in endpoints:
             value = (e.get("pricing") or {}).get(key)
@@ -515,6 +523,8 @@ def openrouter_median_prices(model_id, document):
         if not amounts:
             if required:
                 raise ParseError(f"OpenRouter: {model_id} has no fixed {key} price")
+            return None
+        if not required and 2 * len(amounts) < len(endpoints):
             return None
         return round(statistics.median(amounts) * 1_000_000, 6)
 
@@ -546,7 +556,10 @@ def scrape_openrouter(today, document=None, endpoints=None):
         raise ParseError(f"OpenRouter: a model list of {len(data) if isinstance(data, list) else '?'} entries is not the full list")
     listed = {m["id"]: m for m in data if isinstance(m, dict) and "id" in m}
     if endpoints is None:
-        endpoints = lambda model_id: fetch(OPENROUTER_ENDPOINTS_URL.format(model_id))  # noqa: E731
+        def endpoints(model_id):
+            time.sleep(0.5)
+            # One provider's entry is about 1.5 kB: the floor of a page does not apply.
+            return fetch(OPENROUTER_ENDPOINTS_URL.format(model_id), min_length=100)
     stamp = Stamp(today, OPENROUTER_MODELS_URL)
 
     offerings = []
