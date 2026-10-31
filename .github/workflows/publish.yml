@@ -7,12 +7,9 @@ name: publish
 # its own or a pull request merged by a maintainer, publishes a release named
 # after its date.
 #
-# The release is built here rather than by the tag workflow: a tag created
-# with the workflow's own token starts no other workflow.
-#
 # A change outside the data, to tools/ or schema/, is released by running
-# this workflow by hand, so that the name is still chosen in the publish
-# queue rather than by a tag pushed alongside an automatic release.
+# this workflow by hand. This workflow is the only one that publishes, so a
+# release name is always chosen in the publish queue.
 on:
   push:
     branches: [main]
@@ -24,14 +21,15 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: publish
-  cancel-in-progress: false
-
 jobs:
   publish:
     # A run by hand can target any branch: only main is released.
     if: github.ref == 'refs/heads/main'
+    # On the job rather than the workflow, so that a run skipped for its
+    # branch never takes the place of a pending one.
+    concurrency:
+      group: publish
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
