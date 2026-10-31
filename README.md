@@ -117,13 +117,15 @@ Contributions are reviewed by the Xolo maintainers.
 
 ## Releases
 
-Each `v*` tag publishes `catalog.json`, every model and provider in one file, as a GitHub release asset:
+Each release publishes `catalog.json`, every model and provider in one file, as a GitHub release asset:
 
 ```
 https://github.com/xolo-gateway/catalog/releases/latest/download/catalog.json
 ```
 
-Its `version` is the tag, so that Xolo can record which release a model was imported from.
+Its `version` is the release's tag, so that Xolo can record which release a model was imported from.
+
+Xolo reads the latest release only, and follows a model's values only when the release's version differs from the one the model was imported with. So every push to `main` that changes `models/` or `providers/` publishes a release on its own (`.github/workflows/publish.yml`), whether it is a daily refresh merged on its own or a pull request merged by a maintainer. A release is named after its date in UTC, `vYYYY.M.D`, then `vYYYY.M.D.2`, `vYYYY.M.D.3` and so on for the later releases of the same day. A change outside `models/` and `providers/`, to `tools/` or `schema/` for instance, publishes nothing: a maintainer releases it by running the same workflow by hand, from the Actions tab or with `gh workflow run publish.yml`. A tag pushed by hand publishes nothing. Nothing retries a failed run, and a run waiting for another one is cancelled when a newer one queues behind it: run the workflow again by hand when a release you expected shows as failed or cancelled.
 
 ## License
 

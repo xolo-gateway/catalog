@@ -1,0 +1,91 @@
+name: publish
+
+# Xolo reads the latest release only, and follows a model's prices only when
+# the release's version differs from the one the model was imported with:
+# data merged on main reaches no instance until it is released under a new
+# tag. So every push to main that changes the data, a daily refresh merged on
+# its own or a pull request merged by a maintainer, publishes a release named
+# after its date.
+#
+# A change outside the data, to tools/ or schema/, is released by running
+# this workflow by hand. This workflow is the only one that publishes, so a
+# release name is always chosen in the publish queue.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "models/**"
+      - "providers/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    # A run by hand can target any branch: only main is released.
+    if: github.ref == 'refs/heads/main'
+    # On the job rather than the workflow, so that a run skipped for its
+    # branch never takes the place of a pending one.
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tools/requirements.txt
+      - run: python tools/catalog.py validate --max-age-days 180
+      - name: Test the scrapers and the merge guard
+        run: python -m unittest discover -s tools
+      - name: Choose the next version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A tag alone is not a release: one pushed by hand publishes
+          # nothing, so HEAD is released only when one of its tags carries a
+          # published release.
+          for t in $(git tag --points-at HEAD --list 'v*'); do
+            if [ "$(gh release view "$t" --json isDraft --jq .isDraft 2>/dev/null)" = false ]; then
+              echo "::notice::HEAD is already released as $t, nothing published."
+              exit 0
+            fi
+          done
+          # The release date in UTC, vYYYY.M.D, then vYYYY.M.D.2, .3 and so
+          # on for the later releases of the same day. A name is taken by a
+          # tag, or by a published release whose tag was deleted; a draft
+          # left by a stopped run is not, the publish step removes it.
+          taken() {
+            git rev-parse -q --verify "refs/tags/$1" >/dev/null ||
+              [ "$(gh release view "$1" --json isDraft --jq .isDraft 2>/dev/null)" = false ]
+          }
+          day="v$(date -u +%Y.%-m.%-d)"
+          tag="$day"
+          n=1
+          while taken "$tag"; do
+            n=$(( n + 1 ))
+            tag="$day.$n"
+          done
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Build the catalog
+        if: steps.version.outputs.tag
+        run: python tools/catalog.py build --version "${{ steps.version.outputs.tag }}" --output dist/catalog.json
+      - name: Publish the release
+        if: steps.version.outputs.tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        # gh creates a draft, uploads the asset, then publishes it, which
+        # creates the tag. A run stopped in between leaves a draft without a
+        # tag under the name this run chose again: remove it, or the creation
+        # fails on the name already taken.
+        run: |
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
+            gh release delete "$TAG" --yes
+          fi
+          gh release create "$TAG" dist/catalog.json --target "$GITHUB_SHA" --title "$TAG" --notes "Catalog $TAG, licensed under the ODbL 1.0."

@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    tags: ["v*"]
   schedule:
     # Weekly, so that values growing stale are flagged even when nothing
     # changes.
@@ -25,21 +24,3 @@ jobs:
       - run: python tools/catalog.py validate --max-age-days 180
       - name: Test the scrapers and the merge guard
         run: python -m unittest discover -s tools -v
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: validate
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r tools/requirements.txt
-      - run: python tools/catalog.py build --version "${GITHUB_REF_NAME}" --output dist/catalog.json
-      - name: Publish the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/catalog.json --title "${GITHUB_REF_NAME}" --notes "Catalog ${GITHUB_REF_NAME}, licensed under the ODbL 1.0."
