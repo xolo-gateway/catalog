@@ -182,6 +182,40 @@ class OpenRouterTest(CatalogCopy):
         with self.assertRaises(refresh.ParseError):
             self.scrape(endpoints=lambda model_id: json.dumps({"data": {"endpoints": []}}))
 
+    def test_publishes_the_cache_prices_most_providers_state(self):
+        doc = json.loads(openrouter_endpoints((1, 4), (1, 4), (1, 4), (1, 4)))
+        for i, e in enumerate(doc["data"]["endpoints"]):
+            e["pricing"]["input_cache_read"] = str(0.1 / 1e6)
+            if i % 2:
+                e["pricing"]["input_cache_write"] = str(2 / 1e6)
+        self.scrape(endpoints=lambda model_id: json.dumps(doc))
+        for o in self.provider("openrouter")["offerings"]:
+            self.assertEqual((o["prices"]["cached_input"], o["prices"]["cache_write"]), (0.1, 2.0))
+            self.assertEqual(o["prices"]["status"], "estimated")
+            self.assertIn("Median", o["prices"]["note"])
+
+    def test_keeps_an_offering_the_list_no_longer_has(self):
+        gone = self.provider("openrouter")["offerings"][0]
+        doc = self.document()
+        doc["data"] = [m for m in doc["data"] if m["id"] != gone["model_id"]]
+        self.scrape(document=doc)
+        kept = {o["model_id"]: o for o in self.provider("openrouter")["offerings"]}
+        self.assertEqual(kept[gone["model_id"]], gone)
+
+    def test_the_median_leaves_out_the_flex_and_priority_tiers(self):
+        doc = json.loads(openrouter_endpoints((1, 5), (2, 10), (2.2, 11), (3.6, 18), (3.6, 18)))
+        for e, tier in zip(doc["data"]["endpoints"], ("flex", None, "standard", "priority", "priority")):
+            e["service_tier"] = tier
+        prices = refresh.openrouter_median_prices("m", json.dumps(doc))
+        self.assertEqual((prices["input"], prices["output"]), (2.1, 10.5))
+
+    def test_refuses_providers_without_a_status(self):
+        doc = json.loads(openrouter_endpoints((1, 4), (2, 5)))
+        for e in doc["data"]["endpoints"]:
+            del e["status"]
+        with self.assertRaises(refresh.ParseError):
+            refresh.openrouter_median_prices("m", json.dumps(doc))
+
     def test_refuses_a_truncated_list(self):
         doc = self.document()
         doc["data"] = doc["data"][:10]

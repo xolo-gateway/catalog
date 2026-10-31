@@ -483,11 +483,12 @@ def scrape_opencode_go(today, page=None):
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 OPENROUTER_ENDPOINTS_URL = "https://openrouter.ai/api/v1/models/{}/endpoints"
 OPENROUTER_PRICES_NOTE = (
-    "Median of the prices of the providers OpenRouter serves this model through, "
-    "those without a current incident (all of them when every one has one); a cache "
-    "price only when at least half of them state one. A request is billed at the price of the "
-    "provider it reaches, cheaper or dearer: the price the model list shows is "
-    "one provider's, and moves whenever a provider comes, goes or runs a discount."
+    "Median of the prices of the providers OpenRouter serves this model through at "
+    "the standard tier, those without a current incident (all of them when every one "
+    "has one); a cache price only when at least half of them state one. A request is "
+    "billed at the price of the provider it reaches, cheaper or dearer: the price the "
+    "model list shows is one provider's, and moves whenever a provider comes, goes or "
+    "runs a discount."
 )
 
 
@@ -501,6 +502,12 @@ def openrouter_median_prices(model_id, document):
         raise ParseError(f"OpenRouter: unreadable providers of {model_id}: {error}") from error
     if not isinstance(endpoints, list) or not endpoints:
         raise ParseError(f"OpenRouter: no provider serves {model_id}")
+    # A flex or priority tier is reached only by a request asking for it.
+    endpoints = [e for e in endpoints if isinstance(e, dict)]
+    endpoints = [e for e in endpoints if e.get("service_tier") in (None, "", "standard")] or endpoints
+    # Without a status, the incident filter would turn itself off unseen.
+    if not any(isinstance(e, dict) and type(e.get("status")) is int for e in endpoints):
+        raise ParseError(f"OpenRouter: no provider of {model_id} states its status")
     healthy = [e for e in endpoints if isinstance(e, dict) and e.get("status") == 0]
     # Every provider in trouble at once still has prices worth reading.
     endpoints = healthy or [e for e in endpoints if isinstance(e, dict)]
