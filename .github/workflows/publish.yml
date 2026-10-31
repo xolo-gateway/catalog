@@ -39,17 +39,25 @@ jobs:
         run: python -m unittest discover -s tools
       - name: Choose the next version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "$(git tag --points-at HEAD --list 'v*')" ]; then
             echo "::notice::HEAD is already released, nothing published."
             exit 0
           fi
           # The release date in UTC, vYYYY.M.D, then vYYYY.M.D.2, .3 and so
-          # on for the later releases of the same day.
+          # on for the later releases of the same day. A name is taken by a
+          # tag, or by a published release whose tag was deleted; a draft
+          # left by a stopped run is not, the publish step removes it.
+          taken() {
+            git rev-parse -q --verify "refs/tags/$1" >/dev/null ||
+              [ "$(gh release view "$1" --json isDraft --jq .isDraft 2>/dev/null)" = false ]
+          }
           day="v$(date -u +%Y.%-m.%-d)"
           tag="$day"
           n=1
-          while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do
+          while taken "$tag"; do
             n=$(( n + 1 ))
             tag="$day.$n"
           done
