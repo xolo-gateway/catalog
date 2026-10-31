@@ -125,7 +125,7 @@ https://github.com/xolo-gateway/catalog/releases/latest/download/catalog.json
 
 Its `version` is the tag, so that Xolo can record which release a model was imported from.
 
-Xolo reads the latest release only, and follows a model's values only when the release's version differs from the one the model was imported with. So every push to `main` that changes `models/` or `providers/` publishes the next patch release on its own (`.github/workflows/publish.yml`), whether it is a daily refresh merged on its own or a pull request merged by a maintainer. A minor or major release is still tagged by hand.
+Xolo reads the latest release only, and follows a model's values only when the release's version differs from the one the model was imported with. So every push to `main` that changes `models/` or `providers/` publishes a release on its own (`.github/workflows/publish.yml`), whether it is a daily refresh merged on its own or a pull request merged by a maintainer. A release is named after its date in UTC, `vYYYY.M.D`, then `vYYYY.M.D.2`, `vYYYY.M.D.3` and so on for the later releases of the same day.
 
 ## License
 

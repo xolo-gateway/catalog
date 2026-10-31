@@ -4,8 +4,8 @@ name: publish
 # the release's version differs from the one the model was imported with:
 # data merged on main reaches no instance until it is released under a new
 # tag. So every push to main that changes the data, a daily refresh merged on
-# its own or a pull request merged by a maintainer, publishes the next patch
-# release.
+# its own or a pull request merged by a maintainer, publishes a release named
+# after its date.
 #
 # The release is built here rather than by the tag workflow: a tag created
 # with the workflow's own token starts no other workflow.
@@ -44,15 +44,16 @@ jobs:
             echo "::notice::HEAD is already released, nothing published."
             exit 0
           fi
-          # The newest tag of any shape: a hand-made v1.0 or v0.2.0-rc1 must
-          # stop the run rather than be skipped, or the next release would
-          # come out lower than it and roll every instance back.
-          latest="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
-          if ! [[ "$latest" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::The newest tag, '$latest', is not vX.Y.Z: tag the next release by hand."
-            exit 1
-          fi
-          echo "tag=v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$(( BASH_REMATCH[3] + 1 ))" >> "$GITHUB_OUTPUT"
+          # The release date in UTC, vYYYY.M.D, then vYYYY.M.D.2, .3 and so
+          # on for the later releases of the same day.
+          day="v$(date -u +%Y.%-m.%-d)"
+          tag="$day"
+          n=1
+          while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do
+            n=$(( n + 1 ))
+            tag="$day.$n"
+          done
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Build the catalog
         if: steps.version.outputs.tag
         run: python tools/catalog.py build --version "${{ steps.version.outputs.tag }}" --output dist/catalog.json
@@ -61,4 +62,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
-        run: gh release create "$TAG" dist/catalog.json --target "$GITHUB_SHA" --title "$TAG" --notes "Catalog $TAG, licensed under the ODbL 1.0."
+        # gh creates a draft, uploads the asset, then publishes it, which
+        # creates the tag. A run stopped in between leaves a draft without a
+        # tag under the name this run chose again: remove it, or the creation
+        # fails on the name already taken.
+        run: |
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
+            gh release delete "$TAG" --yes
+          fi
+          gh release create "$TAG" dist/catalog.json --target "$GITHUB_SHA" --title "$TAG" --notes "Catalog $TAG, licensed under the ODbL 1.0."
