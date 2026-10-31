@@ -30,6 +30,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: validate
     runs-on: ubuntu-latest
+    # Shared with publish.yml, so that a release tagged by hand and one
+    # published on a data change never run together: the later one becomes
+    # the latest release, whatever its version.
+    concurrency:
+      group: publish
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:

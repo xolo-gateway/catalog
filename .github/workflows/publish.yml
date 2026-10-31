@@ -41,12 +41,18 @@ jobs:
         id: version
         run: |
           if [ -n "$(git tag --points-at HEAD --list 'v*')" ]; then
-            echo "HEAD is already released." >&2
+            echo "::notice::HEAD is already released, nothing published."
             exit 0
           fi
-          latest="$(git tag --list 'v*.*.*' --sort=-v:refname | head -n 1)"
-          IFS=. read -r major minor patch <<< "${latest#v}"
-          echo "tag=v${major:-0}.${minor:-1}.$(( ${patch:-0} + 1 ))" >> "$GITHUB_OUTPUT"
+          # The newest tag of any shape: a hand-made v1.0 or v0.2.0-rc1 must
+          # stop the run rather than be skipped, or the next release would
+          # come out lower than it and roll every instance back.
+          latest="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+          if ! [[ "$latest" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::The newest tag, '$latest', is not vX.Y.Z: tag the next release by hand."
+            exit 1
+          fi
+          echo "tag=v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$(( BASH_REMATCH[3] + 1 ))" >> "$GITHUB_OUTPUT"
       - name: Build the catalog
         if: steps.version.outputs.tag
         run: python tools/catalog.py build --version "${{ steps.version.outputs.tag }}" --output dist/catalog.json
