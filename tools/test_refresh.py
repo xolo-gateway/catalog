@@ -340,6 +340,17 @@ class MistralTest(CatalogCopy):
         with self.assertRaises(refresh.ParseError):
             refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
 
+    def test_reads_a_card_with_its_price_among_other_props(self):
+        # Since October 31, 2026 the price block follows a heading in its
+        # component's props.
+        card = refresh.mistral_card(self.card("codestral-25-08"), "codestral-25-08")
+        self.assertEqual(card["names"], ["codestral-2508", "codestral-latest"])
+        self.assertEqual(card["prices"], {"input": 0.3, "output": 0.9})
+
+    def test_leaves_out_a_card_badged_deprecated_by_type(self):
+        # The badge names its type rather than saying it in its text.
+        self.assertIsNone(refresh.mistral_card(self.card("mistral-large-3-25-12"), "mistral-large-3-25-12"))
+
     def test_refuses_a_shrunken_list(self):
         refresh.MISTRAL_MIN_PRICED = 10
         pages, index = self.pages()

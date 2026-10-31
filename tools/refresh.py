@@ -680,8 +680,9 @@ def mistral_card(page, slug):
     tokens), which is left out."""
     payload = next_payload(page)
     # A retired or deprecated model's card carries a badge saying so: no
-    # longer one to import, whatever else the card states.
-    if '"children":"Retired"' in payload or '"children":"Deprecated"' in payload:
+    # longer one to import, whatever else the card states. The badge names
+    # its type, or, on the older cards, says it in its text.
+    if re.search(r'"data-badge-type":"(retired|deprecated)"|"children":"(Retired|Deprecated)"', payload):
         return None
     names = json_after(payload, '{"names":', "[")
     # A card without an API name describes a model the API does not serve.
@@ -689,10 +690,12 @@ def mistral_card(page, slug):
         return None
     if not all(isinstance(n, str) and re.match(r"^[a-z0-9][a-z0-9.-]*$", n) for n in names):
         raise ParseError(f"Mistral {slug}: unreadable model names {names!r}")
-    i = payload.find('{"pricing":{')
+    # The price block, wherever it sits among its component's props; a
+    # second copy refers to it as "$…" and is skipped.
+    i = payload.find('"pricing":{')
     if i < 0:
         raise ParseError(f"Mistral {slug}: the card states no price")
-    card = json_after(payload[i:], '{"pricing":', "{")
+    card = json_after(payload[i:], '"pricing":', "{")
     retired = re.search(r'"isRetired":(true|false)', payload[i:])
     if not retired:
         raise ParseError(f"Mistral {slug}: the card does not say whether the model is retired")
