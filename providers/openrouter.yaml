@@ -33,7 +33,7 @@ offerings:
 - model: deepseek-v4.1-flash
   model_id: deepseek/deepseek-v4.1-flash
   prices:
-    input: 0.1975
+    input: 0.21
     cached_input: 0.006
     output: 0.84
     status: estimated
@@ -57,10 +57,10 @@ offerings:
 - model: gemini-4-argon
   model_id: google/gemini-4-argon
   prices:
-    input: 2.0
-    cached_input: 0.1
+    input: 2.1
+    cached_input: 0.105
     cache_write: 0.1875
-    output: 10.0
+    output: 10.5
     status: estimated
     source: https://openrouter.ai/api/v1/models/google/gemini-4-argon/endpoints
     date: '2026-11-01'
@@ -155,7 +155,7 @@ offerings:
   model_id: minimax/minimax-m3
   prices:
     input: 0.3
-    cached_input: 0.056
+    cached_input: 0.06
     output: 1.2
     status: estimated
     source: https://openrouter.ai/api/v1/models/minimax/minimax-m3/endpoints
@@ -228,10 +228,10 @@ offerings:
   prices:
     input: 2.55
     cached_input: 0.2925
-    output: 14.125
+    output: 15.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k3/endpoints
-    date: '2026-10-31'
+    date: '2026-11-01'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -398,9 +398,9 @@ offerings:
 - model: hy3
   model_id: tencent/hy3
   prices:
-    input: 0.145
-    cached_input: 0.0375
-    output: 0.61
+    input: 0.14
+    cached_input: 0.035
+    output: 0.58
     status: estimated
     source: https://openrouter.ai/api/v1/models/tencent/hy3/endpoints
     date: '2026-11-01'
@@ -494,12 +494,12 @@ offerings:
 - model: mimo-v2.5-pro
   model_id: xiaomi/mimo-v2.5-pro
   prices:
-    input: 0.4575
-    cached_input: 0.0498
-    output: 1.335
+    input: 0.48
+    cached_input: 0.096
+    output: 1.8
     status: estimated
     source: https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.5-pro/endpoints
-    date: '2026-10-31'
+    date: '2026-11-01'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -566,8 +566,8 @@ offerings:
 - model: glm-5.2
   model_id: z-ai/glm-5.2
   prices:
-    input: 0.966
-    cached_input: 0.14
+    input: 0.938
+    cached_input: 0.15
     output: 4.4
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.2/endpoints
@@ -590,9 +590,9 @@ offerings:
 - model: glm-5.3
   model_id: z-ai/glm-5.3
   prices:
-    input: 0.945
-    cached_input: 0.155
-    output: 3.67
+    input: 0.91
+    cached_input: 0.154
+    output: 3.6
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
     date: '2026-11-01'
