@@ -87,6 +87,20 @@ offerings:
     status: published
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
+- model: mistral-large-2512
+  model_id: mistral-large-2512
+  prices:
+    input: 0.5
+    output: 1.5
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
 - model: mistral-large-4
   model_id: mistral-large-4
   prices:
@@ -98,6 +112,20 @@ offerings:
     date: '2026-10-29'
   context_window:
     value: 1048576
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+    note: The card states the size in k tokens, read as multiples of 1024.
+- model: mistral-medium-3-5
+  model_id: mistral-medium-3-5
+  prices:
+    input: 1.5
+    output: 7.5
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-10-29'
+  context_window:
+    value: 262144
     status: published
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
