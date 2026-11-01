@@ -376,6 +376,18 @@ class MistralTest(CatalogCopy):
         page += '<script>self.__next_f.push([1,"{\\"isRetired\\":true}"])</script>'
         self.assertIsNone(refresh.mistral_card(page, "mistral-large-3-25-12"))
 
+    def test_refuses_a_list_read_mostly_as_deprecated(self):
+        # A badge read on every card would otherwise write the last prices
+        # back as a success.
+        refresh.MISTRAL_MIN_PRICED = 1
+        deprecated = self.card("mistral-large-3-25-12")
+        page = self.card("mistral-large-4-0")
+        page += '<script>self.__next_f.push([1,"{\\"data-badge-type\\":\\"deprecated\\"}"])</script>'
+        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated, "mistral-large-4-0": page,
+                                     "mistral-embed-23-12": deprecated})
+        with self.assertRaises(refresh.ParseError):
+            refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
+
     def test_two_deprecated_cards_may_name_the_same_model(self):
         # Voxtral Mini's deprecated cards share their API names.
         refresh.MISTRAL_MIN_PRICED = 1

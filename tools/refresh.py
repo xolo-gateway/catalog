@@ -685,10 +685,11 @@ def mistral_card(page, slug):
     # badge names its type, or, on the older cards, says it in its text. A
     # retired model is no longer one to import, whatever else the card
     # states: any sign of retirement wins over a deprecation.
-    if re.search(r'"data-badge-type":"retired"|"children":"Retired"|"isRetired":true', payload):
+    # The flag is the card's own when read from its header on.
+    at = max(payload.find('{"names":'), 0)
+    if re.search(r'"data-badge-type":"retired"|"children":"Retired"', payload) or '"isRetired":true' in payload[at:]:
         return None
     deprecated = re.search(r'"data-badge-type":"deprecated"|"children":"Deprecated"', payload)
-    at = payload.find('{"names":')
     names = json_after(payload, '{"names":', "[")
     # A card without an API name describes a model the API does not serve.
     if names == []:
@@ -799,10 +800,14 @@ def scrape_mistral(today, pages=None, index=None):
     for model_id in sorted(deprecated - seen):
         if model_id in old_offerings:
             offerings.append(old_offerings[model_id])
-    # The deprecated models kept count: a deprecation does not shorten the
-    # list, a page read wrong does.
+    # The deprecated models kept count toward the list: a deprecation does
+    # not shorten it, a page read wrong does. But most of the list must have
+    # been read this run, or a misread taking every card for deprecated would
+    # write the last prices back as a success.
     if len(offerings) < MISTRAL_MIN_PRICED:
         raise ParseError(f"Mistral: {len(offerings)} priced models is not the full list")
+    if 2 * len(seen) < len(offerings):
+        raise ParseError(f"Mistral: {len(seen)} of {len(offerings)} models read priced, the others kept as deprecated")
 
     for stub in stubs:
         ensure_model(*stub)
