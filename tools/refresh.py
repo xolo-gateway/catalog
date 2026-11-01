@@ -677,27 +677,29 @@ def mistral_card(page, slug):
     """What one card states: the model's API names, whether it is retired,
     its token prices and its context size. None for a card Xolo cannot
     import as a priced model (retired, or not priced in input and output
-    tokens), which is left out."""
+    tokens), which is left out. A deprecated model's card gives its names
+    only, with deprecated set: the model is served until its retirement,
+    but the card no longer states a price."""
     payload = next_payload(page)
     # A retired or deprecated model's card carries a badge saying so. The
     # badge names its type, or, on the older cards, says it in its text. A
-    # retired model is no longer one to import, whatever else the card states.
-    badge = re.search(r'"data-badge-type":"(retired|deprecated)"|"children":"(Retired|Deprecated)"', payload)
-    if badge and (badge.group(1) or badge.group(2).lower()) == "retired":
+    # retired model is no longer one to import, whatever else the card
+    # states: any sign of retirement wins over a deprecation.
+    if re.search(r'"data-badge-type":"retired"|"children":"Retired"|"isRetired":true', payload):
         return None
+    deprecated = re.search(r'"data-badge-type":"deprecated"|"children":"Deprecated"', payload)
+    at = payload.find('{"names":')
     names = json_after(payload, '{"names":', "[")
     # A card without an API name describes a model the API does not serve.
     if names == []:
         return None
     if not all(isinstance(n, str) and re.match(r"^[a-z0-9][a-z0-9.-]*$", n) for n in names):
         raise ParseError(f"Mistral {slug}: unreadable model names {names!r}")
-    # A deprecated model is still served until its retirement, but its card
-    # no longer states a price.
-    if badge:
+    if deprecated:
         return {"names": names, "deprecated": True}
-    # The price block, wherever it sits among its component's props; a
-    # second copy refers to it as "$…" and is skipped.
-    i = payload.find('"pricing":{')
+    # The price block, wherever it sits among its component's props, after
+    # the card's header; a second copy refers to it as "$…" and is skipped.
+    i = payload.find('"pricing":{', at)
     if i < 0:
         raise ParseError(f"Mistral {slug}: the card states no price")
     card = json_after(payload[i:], '"pricing":', "{")
@@ -767,7 +769,7 @@ def scrape_mistral(today, pages=None, index=None):
     if path.exists():
         old_offerings = {o["model_id"]: o for o in load_yaml(path).get("offerings") or []}
 
-    offerings, stubs, seen, priced, deprecated = [], [], set(), 0, set()
+    offerings, stubs, seen, deprecated = [], [], set(), set()
     for slug, title in mistral_cards(index if index is not None else get(MISTRAL_INDEX_URL)):
         if pages is None:
             time.sleep(0.5)
@@ -791,15 +793,16 @@ def scrape_mistral(today, pages=None, index=None):
             offering["context_window"] = stamp.merge(old.get("context_window"), {"value": card["context"]},
                                                      note="The card states the size in k tokens, read as multiples of 1024.")
         offerings.append(offering)
-        priced += 1
         stubs.append((offering["model"], title, vendor_of(model_id) if vendor_of(model_id) != "Unknown" else "Mistral AI", card["kind"]))
     # A deprecated model is kept as last read until it is retired, unless a
     # current card prices it; one never read before is not added.
     for model_id in sorted(deprecated - seen):
         if model_id in old_offerings:
             offerings.append(old_offerings[model_id])
-    if priced < MISTRAL_MIN_PRICED:
-        raise ParseError(f"Mistral: {priced} priced models is not the full list")
+    # The deprecated models kept count: a deprecation does not shorten the
+    # list, a page read wrong does.
+    if len(offerings) < MISTRAL_MIN_PRICED:
+        raise ParseError(f"Mistral: {len(offerings)} priced models is not the full list")
 
     for stub in stubs:
         ensure_model(*stub)

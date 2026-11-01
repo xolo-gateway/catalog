@@ -362,6 +362,20 @@ class MistralTest(CatalogCopy):
         offers = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
         self.assertEqual(offers["mistral-large-2512"], before["mistral-large-2512"])
 
+    def test_adds_no_deprecated_model_the_catalog_never_had(self):
+        refresh.MISTRAL_MIN_PRICED = 2
+        deprecated = self.card("mistral-large-3-25-12").replace("mistral-large-2512", "mistral-large-2599")
+        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated})
+        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
+        offers = {o["model_id"] for o in self.provider("mistral")["offerings"]}
+        self.assertNotIn("mistral-large-2599", offers)
+        self.assertFalse((self.root / "models" / "mistral-large-2599.yaml").exists())
+
+    def test_a_retired_sign_wins_over_a_deprecated_badge(self):
+        page = self.card("mistral-large-3-25-12")
+        page += '<script>self.__next_f.push([1,"{\\"isRetired\\":true}"])</script>'
+        self.assertIsNone(refresh.mistral_card(page, "mistral-large-3-25-12"))
+
     def test_two_deprecated_cards_may_name_the_same_model(self):
         # Voxtral Mini's deprecated cards share their API names.
         refresh.MISTRAL_MIN_PRICED = 1
