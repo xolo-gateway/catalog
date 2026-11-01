@@ -347,9 +347,28 @@ class MistralTest(CatalogCopy):
         self.assertEqual(card["names"], ["codestral-2508", "codestral-latest"])
         self.assertEqual(card["prices"], {"input": 0.3, "output": 0.9})
 
-    def test_leaves_out_a_card_badged_deprecated_by_type(self):
+    def test_reads_a_card_badged_deprecated_by_type(self):
         # The badge names its type rather than saying it in its text.
-        self.assertIsNone(refresh.mistral_card(self.card("mistral-large-3-25-12"), "mistral-large-3-25-12"))
+        card = refresh.mistral_card(self.card("mistral-large-3-25-12"), "mistral-large-3-25-12")
+        self.assertEqual(card, {"names": ["mistral-large-2512", "mistral-large-latest"], "deprecated": True})
+
+    def test_keeps_a_deprecated_model_as_last_read_and_adds_no_new_one(self):
+        before = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
+        self.assertIn("mistral-large-2512", before)
+        refresh.MISTRAL_MIN_PRICED = 2
+        deprecated = self.card("mistral-large-3-25-12")
+        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated})
+        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
+        offers = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
+        self.assertEqual(offers["mistral-large-2512"], before["mistral-large-2512"])
+
+    def test_two_deprecated_cards_may_name_the_same_model(self):
+        # Voxtral Mini's deprecated cards share their API names.
+        refresh.MISTRAL_MIN_PRICED = 1
+        deprecated = self.card("mistral-large-3-25-12")
+        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated, "devstral-2-25-12": deprecated})
+        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
+        self.assertIn("mistral-large-2512", {o["model_id"] for o in self.provider("mistral")["offerings"]})
 
     def test_refuses_a_shrunken_list(self):
         refresh.MISTRAL_MIN_PRICED = 10
