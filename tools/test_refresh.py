@@ -138,18 +138,16 @@ class OpenRouterTest(CatalogCopy):
             self.assertIn("Median", o["prices"]["note"])
             self.assertNotIn("cached_input", o["prices"])
 
-    def test_the_median_leaves_out_the_providers_in_trouble(self):
-        doc = json.loads(openrouter_endpoints((0.1, 0.5), (1.4, 4.4), (1.2, 4.0)))
-        doc["data"]["endpoints"] += json.loads(openrouter_endpoints((9, 9), (9, 9), (9, 9), status=-2))["data"]["endpoints"]
+    def test_a_provider_in_an_incident_still_counts(self):
+        # Its status flips within minutes: leaving it out would move the
+        # median between two runs a minute apart.
+        doc = json.loads(openrouter_endpoints((0.1, 0.5), (1.4, 4.4)))
+        doc["data"]["endpoints"] += json.loads(openrouter_endpoints((1.2, 4.0), status=-2))["data"]["endpoints"]
         prices = refresh.openrouter_median_prices("m", json.dumps(doc))
         self.assertEqual((prices["input"], prices["output"]), (1.2, 4.0))
 
     def test_the_median_of_an_even_count_is_the_mean_of_the_middle_two(self):
         prices = refresh.openrouter_median_prices("m", openrouter_endpoints((0.1, 0.5), (0.3, 1.5)))
-        self.assertEqual((prices["input"], prices["output"]), (0.2, 1.0))
-
-    def test_every_provider_in_trouble_still_gives_a_price(self):
-        prices = refresh.openrouter_median_prices("m", openrouter_endpoints((0.1, 0.5), (0.3, 1.5), (0.2, 1.0), status=-2))
         self.assertEqual((prices["input"], prices["output"]), (0.2, 1.0))
 
     def test_a_cache_price_needs_half_of_the_providers(self):
@@ -215,19 +213,6 @@ class OpenRouterTest(CatalogCopy):
             e["service_tier"] = tier
         prices = refresh.openrouter_median_prices("m", json.dumps(doc))
         self.assertEqual((prices["input"], prices["output"]), (2.0, 10.0))
-
-    def test_refuses_providers_without_a_status(self):
-        doc = json.loads(openrouter_endpoints((1, 4), (2, 5)))
-        for e in doc["data"]["endpoints"]:
-            del e["status"]
-        with self.assertRaises(refresh.ParseError):
-            refresh.openrouter_median_prices("m", json.dumps(doc))
-
-    def test_refuses_a_provider_without_a_status_among_others(self):
-        doc = json.loads(openrouter_endpoints((1, 4), (2, 5), (3, 6)))
-        doc["data"]["endpoints"][1]["status"] = "0"
-        with self.assertRaises(refresh.ParseError):
-            refresh.openrouter_median_prices("m", json.dumps(doc))
 
     def test_refuses_a_truncated_list(self):
         doc = self.document()
