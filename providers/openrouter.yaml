@@ -38,7 +38,7 @@ offerings:
     output: 0.84
     status: estimated
     source: https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -57,13 +57,13 @@ offerings:
 - model: gemini-4-argon
   model_id: google/gemini-4-argon
   prices:
-    input: 2.1
-    cached_input: 0.105
+    input: 2.0
+    cached_input: 0.1
     cache_write: 0.1875
-    output: 10.5
+    output: 10.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/google/gemini-4-argon/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -226,12 +226,12 @@ offerings:
 - model: kimi-k3
   model_id: moonshotai/kimi-k3
   prices:
-    input: 2.55
-    cached_input: 0.2925
-    output: 15.0
+    input: 2.325
+    cached_input: 0.27
+    output: 14.625
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k3/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -499,7 +499,7 @@ offerings:
     output: 1.8
     status: estimated
     source: https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.5-pro/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -519,11 +519,11 @@ offerings:
   model_id: xiaomi/mimo-v2.6-flash
   prices:
     input: 0.14
-    cached_input: 0.003
+    cached_input: 0.0029
     output: 0.28
     status: estimated
     source: https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.6-flash/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -566,12 +566,12 @@ offerings:
 - model: glm-5.2
   model_id: z-ai/glm-5.2
   prices:
-    input: 0.938
-    cached_input: 0.15
+    input: 0.7
+    cached_input: 0.1742
     output: 4.4
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.2/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
@@ -590,12 +590,12 @@ offerings:
 - model: glm-5.3
   model_id: z-ai/glm-5.3
   prices:
-    input: 0.91
-    cached_input: 0.154
-    output: 3.6
+    input: 0.84
+    cached_input: 0.14
+    output: 3.74
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
-    date: '2026-11-01'
+    date: '2026-11-02'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), those without a current incident (all of them when every one
       has one); a cache price only when at least half of them state one. A request is billed at the price
