@@ -9,12 +9,12 @@ offerings:
 - model: deepseek-v4-pro
   model_id: deepseek/deepseek-v4-pro
   prices:
-    input: 1.3
+    input: 1.416
     cached_input: 0.135
-    output: 2.832
+    output: 3.12
     status: estimated
     source: https://openrouter.ai/api/v1/models/deepseek/deepseek-v4-pro/endpoints
-    date: '2026-11-03'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -33,12 +33,12 @@ offerings:
 - model: deepseek-v4.1-flash
   model_id: deepseek/deepseek-v4.1-flash
   prices:
-    input: 0.195
+    input: 0.21
     cached_input: 0.006
-    output: 0.84
+    output: 0.9
     status: estimated
     source: https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints
-    date: '2026-11-03'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -202,12 +202,12 @@ offerings:
 - model: kimi-k2.7-code
   model_id: moonshotai/kimi-k2.7-code
   prices:
-    input: 0.912
-    cached_input: 0.17993
-    output: 3.84
+    input: 0.88558
+    cached_input: 0.181165
+    output: 3.82
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k2.7-code/endpoints
-    date: '2026-10-31'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -226,12 +226,12 @@ offerings:
 - model: kimi-k3
   model_id: moonshotai/kimi-k3
   prices:
-    input: 2.025
-    cached_input: 0.255
-    output: 14.125
+    input: 2.11
+    cached_input: 0.2874
+    output: 15.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k3/endpoints
-    date: '2026-11-03'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -470,22 +470,22 @@ offerings:
 - model: mimo-v2.5
   model_id: xiaomi/mimo-v2.5
   prices:
-    input: 0.2595
-    cached_input: 0.041275
-    output: 1.119
+    input: 0.4
+    cached_input: 0.08
+    output: 2.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.5/endpoints
-    date: '2026-11-02'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
       cheaper or dearer: the price the model list shows is one provider''s, and moves whenever a provider
       comes, goes or runs a discount.'
   context_window:
-    value: 1050000
+    value: 1000000
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-10-29'
+    date: '2026-11-04'
   output_window:
     value: 65536
     status: published
@@ -518,12 +518,12 @@ offerings:
 - model: mimo-v2.6-flash
   model_id: xiaomi/mimo-v2.6-flash
   prices:
-    input: 0.126
-    cached_input: 0.0029
+    input: 0.14
+    cached_input: 0.003
     output: 0.28
     status: estimated
     source: https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.6-flash/endpoints
-    date: '2026-11-03'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -592,10 +592,10 @@ offerings:
   prices:
     input: 0.84
     cached_input: 0.145
-    output: 3.6
+    output: 3.34
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
-    date: '2026-11-03'
+    date: '2026-11-04'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
