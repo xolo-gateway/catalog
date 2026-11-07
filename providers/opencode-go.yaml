@@ -13,7 +13,7 @@ plans:
     label: 5h
     duration: 5h
     scope: shared
-    value_budget: 3.0
+    value_budget: 12.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 12.0
@@ -31,6 +31,7 @@ plans:
         value_budget: 12.0
       step-5-preview:
         value_budget: 3.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -59,6 +60,8 @@ plans:
         value_budget: 20.0
       deepseek-v4-pro:
         value_budget: 3.0
+      hy4:
+        value_budget: 12.0
       hy4-preview:
         value_budget: 6.0
       hy3:
@@ -77,7 +80,7 @@ plans:
     label: weekly
     duration: 168h
     scope: shared
-    value_budget: 7.5
+    value_budget: 30.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 30.0
@@ -95,6 +98,7 @@ plans:
         value_budget: 30.0
       step-5-preview:
         value_budget: 7.5
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -123,6 +127,8 @@ plans:
         value_budget: 50.0
       deepseek-v4-pro:
         value_budget: 7.5
+      hy4:
+        value_budget: 30.0
       hy4-preview:
         value_budget: 15.0
       hy3:
@@ -141,7 +147,7 @@ plans:
     label: monthly
     duration: 720h
     scope: shared
-    value_budget: 15.0
+    value_budget: 60.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 60.0
@@ -159,6 +165,7 @@ plans:
         value_budget: 60.0
       step-5-preview:
         value_budget: 15.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -187,6 +194,8 @@ plans:
         value_budget: 100.0
       deepseek-v4-pro:
         value_budget: 15.0
+      hy4:
+        value_budget: 60.0
       hy4-preview:
         value_budget: 30.0
       hy3:
@@ -206,7 +215,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-31'
+  date: '2026-11-07'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
@@ -237,6 +246,7 @@ plans:
         value_budget: 48.0
       step-5-preview:
         value_budget: 12.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -265,6 +275,8 @@ plans:
         value_budget: 40.0
       deepseek-v4-pro:
         value_budget: 12.0
+      hy4:
+        value_budget: 48.0
       hy4-preview:
         value_budget: 24.0
       hy3:
@@ -301,6 +313,7 @@ plans:
         value_budget: 120.0
       step-5-preview:
         value_budget: 30.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -329,6 +342,8 @@ plans:
         value_budget: 100.0
       deepseek-v4-pro:
         value_budget: 30.0
+      hy4:
+        value_budget: 120.0
       hy4-preview:
         value_budget: 60.0
       hy3:
@@ -365,6 +380,7 @@ plans:
         value_budget: 240.0
       step-5-preview:
         value_budget: 60.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -393,6 +409,8 @@ plans:
         value_budget: 200.0
       deepseek-v4-pro:
         value_budget: 60.0
+      hy4:
+        value_budget: 240.0
       hy4-preview:
         value_budget: 120.0
       hy3:
@@ -412,7 +430,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-31'
+  date: '2026-11-07'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
@@ -425,7 +443,7 @@ plans:
     label: 5h
     duration: 5h
     scope: shared
-    value_budget: 4.0
+    value_budget: 13.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 13.0
@@ -443,6 +461,7 @@ plans:
         value_budget: 13.0
       step-5-preview:
         value_budget: 4.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -471,6 +490,8 @@ plans:
         value_budget: 21.0
       deepseek-v4-pro:
         value_budget: 4.0
+      hy4:
+        value_budget: 13.0
       hy4-preview:
         value_budget: 7.0
       hy3:
@@ -489,7 +510,7 @@ plans:
     label: weekly
     duration: 168h
     scope: shared
-    value_budget: 10.0
+    value_budget: 32.5
     model_budgets:
       glm-5.3-flash:
         value_budget: 32.5
@@ -507,6 +528,7 @@ plans:
         value_budget: 32.5
       step-5-preview:
         value_budget: 10.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -535,6 +557,8 @@ plans:
         value_budget: 52.5
       deepseek-v4-pro:
         value_budget: 10.0
+      hy4:
+        value_budget: 32.5
       hy4-preview:
         value_budget: 17.5
       hy3:
@@ -553,7 +577,7 @@ plans:
     label: monthly
     duration: 720h
     scope: shared
-    value_budget: 20.0
+    value_budget: 65.0
     model_budgets:
       glm-5.3-flash:
         value_budget: 65.0
@@ -571,6 +595,7 @@ plans:
         value_budget: 65.0
       step-5-preview:
         value_budget: 20.0
+      crouton-alpha-free: {}
       beam-free: {}
       iceman-contributor-free: {}
       mimo-v2.6-flash:
@@ -599,6 +624,8 @@ plans:
         value_budget: 105.0
       deepseek-v4-pro:
         value_budget: 20.0
+      hy4:
+        value_budget: 65.0
       hy4-preview:
         value_budget: 35.0
       hy3:
@@ -618,7 +645,7 @@ plans:
     period: month
   status: published
   source: https://opencode.ai/docs/go/
-  date: '2026-10-31'
+  date: '2026-11-07'
   note: 'Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its
     published monthly limit for the 5-hour, weekly and monthly windows. The window''s own budget is the
     plan''s most common monthly limit, at the same share. The page does not say whether the windows slide
@@ -654,6 +681,17 @@ offerings:
     status: published
     source: https://opencode.ai/docs/go/
     date: '2026-10-29'
+- model: crouton-alpha
+  model_id: crouton-alpha-free
+  api_type: openai-responses
+  base_url: https://opencode.ai/inference/go/openai/v1
+  prices:
+    input: 0.0
+    output: 0.0
+    cached_input: 0.0
+    status: published
+    source: https://opencode.ai/docs/go/
+    date: '2026-11-07'
 - model: deepseek-v4-pro
   model_id: deepseek-v4-pro
   api_type: openai
@@ -811,6 +849,17 @@ offerings:
     status: published
     source: https://opencode.ai/docs/go/
     date: '2026-10-29'
+- model: hy4
+  model_id: hy4
+  api_type: openai
+  base_url: https://opencode.ai/inference/go/openai/v1
+  prices:
+    input: 0.834
+    output: 2.501
+    cached_input: 0.042
+    status: published
+    source: https://opencode.ai/docs/go/
+    date: '2026-11-07'
 - model: hy4-preview
   model_id: hy4-preview
   api_type: openai
