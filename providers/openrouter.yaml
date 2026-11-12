@@ -226,12 +226,12 @@ offerings:
 - model: kimi-k3
   model_id: moonshotai/kimi-k3
   prices:
-    input: 2.425
-    cached_input: 0.27
+    input: 2.7
+    cached_input: 0.2925
     output: 15.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k3/endpoints
-    date: '2026-11-11'
+    date: '2026-11-12'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -251,11 +251,11 @@ offerings:
   model_id: moonshotai/kimi-k3.1-pro
   prices:
     input: 1.8
-    cached_input: 0.2
+    cached_input: 0.1885
     output: 10.0
     status: estimated
     source: https://openrouter.ai/api/v1/models/moonshotai/kimi-k3.1-pro/endpoints
-    date: '2026-11-11'
+    date: '2026-11-12'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -566,12 +566,12 @@ offerings:
 - model: glm-5.2
   model_id: z-ai/glm-5.2
   prices:
-    input: 1.053
-    cached_input: 0.1742
+    input: 1.043
+    cached_input: 0.1641
     output: 4.4
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.2/endpoints
-    date: '2026-11-11'
+    date: '2026-11-12'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -590,12 +590,12 @@ offerings:
 - model: glm-5.3
   model_id: z-ai/glm-5.3
   prices:
-    input: 1.025
+    input: 0.99
     cached_input: 0.164
-    output: 4.08
+    output: 3.85
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
-    date: '2026-11-11'
+    date: '2026-11-12'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -614,12 +614,12 @@ offerings:
 - model: glm-5.3-flash
   model_id: z-ai/glm-5.3-flash
   prices:
-    input: 0.145
+    input: 0.13
     cached_input: 0.03
     output: 0.5
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints
-    date: '2026-11-11'
+    date: '2026-11-12'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
