@@ -59,7 +59,7 @@ offerings:
     peak:
     - {hours: [01:00-04:00, 06:00-10:00], timezone: UTC, days: [mon, tue, wed, thu, fri], input: 0.3, output: 1.2, cached_input: 0.006}
     status: published
-    source: https://opencode.ai/docs/go/
+    source: https://opencode.ai/inference/go/v1/models
     date: '2026-10-29'
 plans:
 - id: go
@@ -82,7 +82,7 @@ The prices, model lists and plan limits a provider publishes change often. `tool
 
 | Source | Reads | Refreshes |
 | --- | --- | --- |
-| `opencode-go` | the tables of https://opencode.ai/docs/go/ | offerings, API types, prices (tiers and peak hours included), plans and their per-model budgets; adds the models OpenCode Go starts serving |
+| `opencode-go` | Go's public model list, https://opencode.ai/inference/go/v1/models, and the plan table of https://opencode.ai/docs/console/go/ | offerings, API types, prices (tiers, peak hours and dated factors included), plans and their per-model budgets; adds the models OpenCode Go starts serving |
 | `mistral` | the model cards of https://docs.mistral.ai/models | the models served through chat completions or embeddings and priced in tokens (base, cached and output prices, context size); retired, deprecated and non-token models are left out |
 | `openrouter` | https://openrouter.ai/api/v1/models and each model's `/endpoints` | windows of the offerings already in `providers/openrouter.yaml`, and their prices: the median across the providers OpenRouter routes the model to at the standard tier, a provider with a current incident included (its status flips within minutes, its prices don't), marked `estimated`. The price the model list shows is one provider's, and moves by several times as providers come, go or run discounts |
 
