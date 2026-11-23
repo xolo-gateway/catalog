@@ -41,70 +41,111 @@ def opencode_page():
     return (FIXTURES / "opencode-go.html").read_text(encoding="utf-8")
 
 
+def opencode_models():
+    return json.loads((FIXTURES / "opencode-go-models.json").read_text(encoding="utf-8"))
+
+
+def listed(document, model_id):
+    return next(m for m in document["data"] if m["id"] == model_id)
+
+
 class OpenCodeGoTest(CatalogCopy):
-    def scrape(self, page=None):
-        refresh.scrape_opencode_go("2026-10-29", page=page if page is not None else opencode_page())
+    def scrape(self, models=None, page=None, today="2026-11-23"):
+        refresh.scrape_opencode_go(
+            today,
+            page=page if page is not None else opencode_page(),
+            models=json.dumps(models if models is not None else opencode_models()),
+        )
         return self.provider("opencode-go")
+
+    def refuses(self, change):
+        models = opencode_models()
+        change(models)
+        with self.assertRaises(refresh.ParseError):
+            self.scrape(models)
 
     def test_reads_every_offering_and_plan(self):
         p = self.scrape()
         offerings = {o["model_id"]: o for o in p["offerings"]}
         self.assertEqual(len(offerings), 30)
         self.assertEqual([plan["id"] for plan in p["plans"]], ["go", "go-plus", "go-teams"])
+        self.assertEqual([plan["price"]["amount"] for plan in p["plans"]], [10.0, 40.0, 20.0])
         # One window per period, shared by every model, each weighing by its
         # own limit; the window holds the plan's most common limit.
         five_hours = p["plans"][0]["constraints"][0]
         self.assertEqual((five_hours["scope"], five_hours["label"]), ("shared", "5h"))
         limits = [b["value_budget"] for b in five_hours["model_budgets"].values() if b]
         self.assertEqual(five_hours["value_budget"], max(limits, key=lambda v: (limits.count(v), v)))
+        # 20% of the published monthly limit; a model with none is free.
+        self.assertEqual(five_hours["model_budgets"]["deepseek-v4.1-flash"], {"value_budget": 20.0})
+        self.assertEqual(five_hours["model_budgets"]["beam-free"], {})
 
-        deepseek = offerings["deepseek-v4.1-flash"]["prices"]
-        self.assertEqual((deepseek["input"], deepseek["output"]), (0.15, 0.6))
-        self.assertEqual(deepseek["peak"][0]["hours"], ["01:00-04:00", "06:00-10:00"])
+        deepseek = offerings["deepseek-v4.1-flash"]
+        self.assertEqual((deepseek["api_type"], deepseek["base_url"]), ("openai", "https://opencode.ai/inference/go/openai/v1"))
+        self.assertEqual((deepseek["prices"]["input"], deepseek["prices"]["output"]), (0.15, 0.6))
+        peak = deepseek["prices"]["peak"][0]
+        self.assertEqual(peak["hours"], ["01:00-04:00", "06:00-10:00"])
+        self.assertEqual((peak["input"], peak["output"], peak["cached_input"]), (0.3, 1.2, 0.006))
 
-        qwen = offerings["qwen3.7-plus"]["prices"]
-        self.assertEqual(qwen["tiers"][0]["above_input_tokens"], 256_000)
+        haiku = offerings["claude-haiku-5-5"]
+        self.assertEqual(haiku["api_type"], "anthropic")
+        self.assertEqual(haiku["prices"]["tiers"], [
+            {"above_input_tokens": 100_000, "input": 0.5, "cached_input": 0.05, "cache_write": 0.625, "output": 2.5},
+        ])
+        # Priced by how long the cache lives: the shortest, the default.
+        self.assertEqual(offerings["gpt-6-luna"]["prices"]["cache_write"], 0.125)
+        self.assertEqual(offerings["gpt-6-luna"]["api_type"], "openai-responses")
 
-        # The discounted row reads the price in force, not the struck-out one.
-        argon = offerings["gemini-4-argon"]["prices"]
-        self.assertEqual((argon["input"], argon["output"]), (2.0, 10.0))
-        self.assertEqual(offerings["gemini-4-argon"]["api_type"], "gemini")
+        # Listed with Google's Interactions API first: read through Gemini's.
+        argon = offerings["gemini-4-argon"]
+        self.assertEqual(argon["api_type"], "gemini")
+        # The discount ends on 2026-12-01, when a factor of 2 starts.
+        self.assertEqual((argon["prices"]["input"], argon["prices"]["output"]), (2.0, 10.0))
+
+    def test_applies_a_dated_factor_once_it_starts(self):
+        argon = {o["model_id"]: o for o in self.scrape(today="2026-12-01")["offerings"]}["gemini-4-argon"]
+        self.assertEqual((argon["prices"]["input"], argon["prices"]["output"]), (4.0, 20.0))
 
     def test_is_deterministic(self):
         first = self.scrape()
         self.assertEqual(self.scrape(), first)
 
     def test_refuses_an_unreadable_price(self):
-        page = opencode_page().replace("$1.40", "1.40 USD", 1)
-        with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+        self.refuses(lambda d: listed(d, "glm-5.3")["cost"]["text"]["input"].update(price="1.40 USD"))
 
-    def test_refuses_a_missing_column(self):
-        page = opencode_page().replace("Cached Write", "Cache Writes")
-        with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+    def test_refuses_an_unknown_cost_field(self):
+        self.refuses(lambda d: listed(d, "glm-5.3")["cost"]["text"]["input"].update(batch=0.5))
 
-    def test_refuses_an_unknown_qualifier(self):
-        page = opencode_page().replace("(Off-Peak)", "(Night)", 1)
-        with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+    def test_refuses_an_unknown_override_condition(self):
+        def change(d):
+            listed(d, "grok-4.7")["cost"]["text"]["output"]["overrides"][0]["when"] = {"tokens": {"gt": 200000}}
+        self.refuses(change)
 
-    def test_refuses_an_unknown_endpoint(self):
-        page = opencode_page().replace("/chat/completions", "/v2/generate", 1)
-        with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+    def test_refuses_an_unknown_multiplier(self):
+        def change(d):
+            listed(d, "deepseek-v4.1-flash")["cost"]["multipliers"][0]["when"] = {"region": "eu"}
+        self.refuses(change)
 
-    def test_refuses_peak_prices_without_peak_hours(self):
-        page = opencode_page().replace("Peak hours are", "Busy hours are")
-        with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+    def test_refuses_an_unknown_api(self):
+        def change(d):
+            m = listed(d, "glm-5.3")
+            m["api"] = {"realtime": m["api"]["chat-completions"]}
+        self.refuses(change)
 
-    def test_a_failing_page_writes_nothing(self):
+    def test_refuses_a_model_missing_a_plan(self):
+        self.refuses(lambda d: listed(d, "glm-5.3")["go"]["monthly_usage"].pop("go-plus"))
+
+    def test_refuses_a_plan_the_page_does_not_price(self):
+        with self.assertRaises(refresh.ParseError):
+            self.scrape(page=opencode_page().replace("Go Plus", "Go Max"))
+
+    def test_a_failing_list_writes_nothing(self):
         before = sorted(p.name for p in (self.root / "models").iterdir())
-        page = opencode_page().replace("$1.40", "1.40 USD", 1)
         provider = (self.root / "providers" / "opencode-go.yaml").read_text()
+        models = opencode_models()
+        models["data"].append({"id": "brand-new", "type": "chat", "api": {}})
         with self.assertRaises(refresh.ParseError):
-            self.scrape(page)
+            self.scrape(models)
         self.assertEqual(sorted(p.name for p in (self.root / "models").iterdir()), before)
         self.assertEqual((self.root / "providers" / "opencode-go.yaml").read_text(), provider)
 

@@ -230,23 +230,6 @@ def price(text, discounted=False):
     return float(m.group(1).replace(",", ""))
 
 
-def limit(text):
-    """A monthly limit cell: '$60' → 60; '-', 'Free' or 'Unlimited' → None,
-    no limit. Any other text is an error."""
-    t = text.strip()
-    # "Unlimited" or "Free" may carry a note glued to it ("Unlimitedlimited
-    # time"): the word is what counts.
-    if t.lower() in ABSENT or re.match(r"^(free|unlimited)", t, re.I):
-        return None
-    m = MONEY.match(t)
-    if not m:
-        raise ParseError(f"unreadable limit {text!r}")
-    value = float(m.group(1).replace(",", ""))
-    if value <= 0:
-        raise ParseError(f"non-positive limit {text!r}")
-    return value
-
-
 def money(text):
     """A plan price: '$10/month' → 10, None when unreadable."""
     m = re.search(r"\$\s?([0-9]+(?:\.[0-9]+)?)", text.replace(",", ""))
@@ -255,16 +238,20 @@ def money(text):
 
 # ── OpenCode Go ──────────────────────────────────────────────────────────────
 
-OPENCODE_GO_URL = "https://opencode.ai/docs/go/"
+# The models, their APIs, prices and monthly limits come from Go's public
+# model list; the page only states the plans' prices.
+OPENCODE_GO_URL = "https://opencode.ai/docs/console/go/"
+OPENCODE_GO_MODELS_URL = "https://opencode.ai/inference/go/v1/models"
 
-# The API an OpenCode Go endpoint path is called through, and the suffix of
-# that path to strip to get the API's base URL.
-OPENCODE_ENDPOINTS = [
-    (re.compile(r"^(.*)/chat/completions$"), "openai"),
-    (re.compile(r"^(.*)/responses$"), "openai-responses"),
-    (re.compile(r"^(.*)/messages$"), "anthropic"),
-    (re.compile(r"^(.*)/models/[^/:]+(?::[A-Za-z]+)?$"), "gemini"),
-]
+# The API types of the APIs a Go model is listed with. Google's Interactions
+# API has no client in Xolo: a model listed with it is read through another.
+OPENCODE_APIS = {
+    "chat-completions": "openai",
+    "responses": "openai-responses",
+    "messages": "anthropic",
+    "generate-content": "gemini",
+}
+OPENCODE_UNUSED_APIS = {"interactions"}
 
 # Vendors of the model families OpenCode Go serves, by model ID prefix, for
 # the stub of a model the catalog does not know yet.
@@ -274,6 +261,16 @@ VENDORS = {
     "hy": "Tencent", "grok": "xAI", "gpt": "OpenAI", "claude": "Anthropic", "gemini": "Google",
     "muse": "Muse", "beam": "Beam", "iceman": "Iceman", "zai": "Z.ai",
 }
+
+OPENCODE_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+OPENCODE_PLANS_NOTE = (
+    "Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its published "
+    "monthly limit for the 5-hour, weekly and monthly windows. The window's own budget is the plan's most common "
+    "monthly limit, at the same share. The 5-hour window opens on the first request, the weekly one resets on "
+    "Mondays at 00:00 UTC and the monthly one with the paid period: the catalog holds them as rolling windows, "
+    "\"monthly\" approximated as 720 hours. A model listed with no budget is free for a limited time."
+)
 
 
 def vendor_of(model_id):
@@ -289,159 +286,253 @@ def catalog_model_id(model_id):
     return re.sub(r"-(free|contributor)$", "", model_id)
 
 
-# The qualifiers a priced row may carry, the base tier first.
-QUALIFIERS = [
-    (re.compile(r"^$"), "base"),
-    (re.compile(r"^off-peak$", re.I), "base"),
-    (re.compile(r"^peak$", re.I), "peak"),
-    (re.compile(r"^[≤<]=?\s*[0-9]+K tokens$", re.I), "base"),
-    (re.compile(r"^>\s*([0-9]+)K tokens$", re.I), "tier"),
-    # A temporary discount: the price listed is the one in force.
-    (re.compile(r"^[0-9]+% off$", re.I), "discount"),
-]
+def amount(value, what):
+    """A price or a limit of the model list: a non-negative number."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+        raise ParseError(f"OpenCode Go: unreadable {what} {value!r}")
+    return float(value)
 
 
-def qualifier_kind(qualifier):
-    for pattern, kind in QUALIFIERS:
-        if pattern.match(qualifier):
-            return kind
-    raise ParseError(f"unknown price qualifier {qualifier!r}")
+def only_keys(obj, allowed, what):
+    if not isinstance(obj, dict):
+        raise ParseError(f"OpenCode Go: {what} is not an object")
+    unknown = set(obj) - set(allowed)
+    if unknown:
+        raise ParseError(f"OpenCode Go: {what} has unknown fields {sorted(unknown)}")
+    return obj
 
 
-def scrape_opencode_go(today, page=None):
+def cache_write(value, what):
+    """A cache write price, or, priced by how long the cache lives
+    ('5m', '1h'), the price of the shortest: the one a request pays by
+    default."""
+    if not isinstance(value, dict):
+        return amount(value, what)
+    durations = {}
+    for key, v in value.items():
+        m = re.match(r"^([0-9]+)([mh])$", key)
+        if not m:
+            raise ParseError(f"OpenCode Go: unknown cache duration {key!r} in {what}")
+        durations[int(m.group(1)) * (60 if m.group(2) == "h" else 1)] = amount(v, what)
+    if not durations:
+        raise ParseError(f"OpenCode Go: {what} has no price")
+    return durations[min(durations)]
+
+
+def context_threshold(when, what):
+    """The input size above which an override prices a request."""
+    only_keys(when, ["context"], f"{what} condition")
+    only_keys(when["context"], ["gt"], f"{what} condition")
+    threshold = when["context"]["gt"]
+    if isinstance(threshold, bool) or not isinstance(threshold, int) or threshold <= 0:
+        raise ParseError(f"OpenCode Go: unreadable threshold {threshold!r} in {what}")
+    return threshold
+
+
+def opencode_prices(model_id, cost):
+    """The prices of one model, per million tokens: the base ones, by input
+    size above a threshold, and a factor by time of day. Read from the model
+    list's cost; any shape it does not know is an error."""
+    only_keys(cost, ["text", "audio", "multipliers"], f"{model_id} cost")
+    text = only_keys(cost.get("text"), ["input", "output"], f"{model_id} text cost")
+    side_in = only_keys(text.get("input"), ["price", "cache", "overrides"], f"{model_id} input cost")
+    side_out = only_keys(text.get("output"), ["price", "overrides"], f"{model_id} output cost")
+    if "price" not in side_in or "price" not in side_out:
+        raise ParseError(f"OpenCode Go: {model_id} has no input or output price")
+
+    def input_values(block, what):
+        values = {"input": amount(block["price"], what)}
+        if "cache" in block:
+            cache = only_keys(block["cache"], ["read", "write"], f"{what} cache")
+            if "read" in cache:
+                values["cached_input"] = amount(cache["read"], f"{what} cache read")
+            if "write" in cache:
+                values["cache_write"] = cache_write(cache["write"], f"{what} cache write")
+        return values
+
+    base = {**input_values(side_in, f"{model_id} input"), "output": amount(side_out["price"], f"{model_id} output")}
+    tiers = {}
+    for side, block in (("input", side_in), ("output", side_out)):
+        overrides = block.get("overrides") or []
+        if not isinstance(overrides, list):
+            raise ParseError(f"OpenCode Go: {model_id} {side} overrides is not a list")
+        for override in overrides:
+            what = f"{model_id} {side} override"
+            allowed = ["when", "price", "cache"] if side == "input" else ["when", "price"]
+            only_keys(override, allowed, what)
+            if "price" not in override:
+                raise ParseError(f"OpenCode Go: {what} has no price")
+            above = context_threshold(override.get("when"), what)
+            tier = tiers.setdefault(above, {"above_input_tokens": above})
+            if side == "input":
+                tier.update(input_values(override, what))
+            else:
+                tier["output"] = amount(override["price"], what)
+    for above, tier in tiers.items():
+        if "input" not in tier or "output" not in tier:
+            raise ParseError(f"OpenCode Go: {model_id} prices only one side above {above} tokens")
+    return base, [tiers[k] for k in sorted(tiers)], cost.get("multipliers") or []
+
+
+def opencode_hours(clause, model_id):
+    """'01:00-04:00' from {"all": [{"utc_hours": {"gte": "01:00"}}, {"utc_hours": {"lt": "04:00"}}]}."""
+    only_keys(clause, ["all"], f"{model_id} multiplier hours")
+    bounds = {}
+    for part in clause["all"] if isinstance(clause["all"], list) else []:
+        only_keys(part, ["utc_hours"], f"{model_id} multiplier hours")
+        for op, hour in only_keys(part["utc_hours"], ["gte", "lt"], f"{model_id} multiplier hours").items():
+            if not isinstance(hour, str) or not re.match(r"^[0-9]{2}:[0-9]{2}$", hour) or op in bounds:
+                raise ParseError(f"OpenCode Go: unreadable hours in {model_id} multiplier")
+            bounds[op] = hour
+    if set(bounds) != {"gte", "lt"}:
+        raise ParseError(f"OpenCode Go: {model_id} multiplier hours are not a range")
+    return f"{bounds['gte']}-{bounds['lt']}"
+
+
+def opencode_multiplier(model_id, multiplier, base, today):
+    """How one multiplier of a model's cost applies: a peak price by time of
+    day, a factor in force today (a date range), or nothing (a date range
+    not reached yet, or past)."""
+    only_keys(multiplier, ["when", "factor"], f"{model_id} multiplier")
+    factor = multiplier.get("factor")
+    if isinstance(factor, bool) or not isinstance(factor, (int, float)) or factor <= 0:
+        raise ParseError(f"OpenCode Go: unreadable factor {factor!r} in {model_id} multiplier")
+    when = multiplier.get("when")
+    if isinstance(when, dict) and set(when) == {"date"}:
+        dates = only_keys(when["date"], ["gte", "lt"], f"{model_id} multiplier dates")
+        try:
+            bounds = {op: datetime.date.fromisoformat(d) for op, d in dates.items()}
+        except (TypeError, ValueError):
+            raise ParseError(f"OpenCode Go: unreadable dates in {model_id} multiplier") from None
+        day = datetime.date.fromisoformat(today)
+        if not bounds or ("gte" in bounds and day < bounds["gte"]) or ("lt" in bounds and day >= bounds["lt"]):
+            return "none", None
+        return "factor", factor
+    only_keys(when, ["utc_days", "any"], f"{model_id} multiplier condition")
+    days = only_keys(when.get("utc_days"), ["in"], f"{model_id} multiplier days").get("in")
+    if not isinstance(days, list) or not days or any(d not in OPENCODE_DAYS for d in days):
+        raise ParseError(f"OpenCode Go: unreadable days in {model_id} multiplier")
+    clauses = when.get("any")
+    if not isinstance(clauses, list) or not clauses:
+        raise ParseError(f"OpenCode Go: {model_id} multiplier has no hours")
+    peak = {"hours": [opencode_hours(c, model_id) for c in clauses], "timezone": "UTC", "days": days}
+    peak.update({k: round(v * factor, 6) for k, v in base.items()})
+    return "peak", peak
+
+
+def scrape_opencode_go(today, page=None, models=None):
     page = page if page is not None else fetch(OPENCODE_GO_URL)
-    tables = page_tables(page)
-    stamp = Stamp(today, OPENCODE_GO_URL)
-
-    # Tables are recognised by their columns, which outlive a reorganised page.
-    def columns(t):
-        return t["rows"][0] if t["rows"] else []
-
-    endpoints = next((t for t in tables if "Model ID" in columns(t) and "Endpoint" in columns(t)), None)
-    if endpoints is None:
-        raise ParseError("OpenCode Go: the page no longer has its endpoint table")
-    by_name = {}
-    for row in as_dicts(endpoints, ["Model", "Model ID", "Endpoint"]):
-        model_id, endpoint = row["Model ID"], row["Endpoint"]
-        for pattern, api_type in OPENCODE_ENDPOINTS:
-            m = pattern.match(endpoint)
-            if m:
-                by_name[row["Model"]] = {"model_id": model_id, "api_type": api_type, "base_url": m.group(1)}
-                break
-        else:
-            raise ParseError(f"OpenCode Go: unknown endpoint {endpoint!r} for {model_id}")
-
-    usage = [t for t in tables if "Monthly limit" in columns(t) and t["panel"]]
-    if not usage or not by_name:
-        raise ParseError("OpenCode Go: the page no longer has its usage or endpoint tables")
-
-    text = re.sub(r"<[^>]+>", " ", page)
-    peak = re.search(r"Peak hours are ([0-9:]+-[0-9:]+)(?: and ([0-9:]+-[0-9:]+))? UTC, Monday through Friday", text)
-
-    # Prices are the same on every plan: they are read from the first table.
-    # A model listed on several rows is priced by tier ("(≤ 256K tokens)",
-    # "(> 256K tokens)") or by time of day ("(Off-Peak)", "(Peak)").
-    prices = {}
-    limits = {}
-    usage_columns = ["Model", "Input", "Output", "Cached Read", "Cached Write", "Monthly limit"]
-    for table in usage:
-        plan = table["panel"]
-        for row in as_dicts(table, usage_columns):
-            label = row["Model"]
-            base = re.sub(r"\s*\(.*\)$", "", label).strip()
-            qualifier = (re.search(r"\((.*)\)$", label) or [None, ""])[1].strip()
-            kind = qualifier_kind(qualifier)
-            if base not in by_name:
-                raise ParseError(f"OpenCode Go: {label!r} is priced but not in the endpoint table")
-            limits.setdefault(plan, {})[base] = limit(row["Monthly limit"])
-            if table is not usage[0]:
-                continue
-            discounted = kind == "discount"
-            if discounted:
-                kind = "base"
-            entry = {
-                "input": price(row["Input"], discounted),
-                "output": price(row["Output"], discounted),
-                "cached_input": price(row["Cached Read"], discounted),
-                "cache_write": price(row["Cached Write"], discounted),
-            }
-            if entry["input"] is None or entry["output"] is None:
-                raise ParseError(f"OpenCode Go: {label!r} has no input or output price")
-            if kind == "peak" and not peak:
-                raise ParseError(f"OpenCode Go: {label!r} is a peak price but the page no longer states the peak hours")
-            prices.setdefault(base, []).append((qualifier, kind, entry))
-    # Every plan prices the same models: a plan that lists others is a
-    # table read wrong.
-    for plan, monthly in limits.items():
-        if set(monthly) != set(limits[usage[0]["panel"]]):
-            raise ParseError(f"OpenCode Go: plan {plan!r} lists other models than {usage[0]['panel']!r}")
+    document = models if models is not None else fetch(OPENCODE_GO_MODELS_URL)
+    stamp = Stamp(today, OPENCODE_GO_MODELS_URL)
+    try:
+        listed = json.loads(document)["data"]
+    except (ValueError, KeyError, TypeError):
+        raise ParseError("OpenCode Go: the model list no longer reads as a list") from None
+    if not isinstance(listed, list) or not listed:
+        raise ParseError("OpenCode Go: the model list is empty")
 
     provider_path = ROOT / "providers" / "opencode-go.yaml"
     provider = load_yaml(provider_path) if provider_path.exists() else {}
     old_offerings = {o["model_id"]: o for o in provider.get("offerings") or []}
 
     offerings = []
-    # The model stubs are written last, once the whole page has been read:
+    limits = {}
+    # The model stubs are written last, once the whole list has been read:
     # a source that fails half way writes nothing.
     stubs = []
-    for name, info in by_name.items():
-        rows = prices.get(name)
-        if not rows:
-            raise ParseError(f"OpenCode Go: {name!r} has an endpoint but no price")
-        bases = [entry for _, kind, entry in rows if kind == "base"]
-        if len(bases) != 1:
-            raise ParseError(f"OpenCode Go: {name!r} has {len(bases)} base prices, want exactly one")
-        base_row = bases[0]
-        tiers, peaks = [], []
-        for qualifier, kind, entry in rows:
-            values = {k: v for k, v in entry.items() if v is not None}
+    for m in listed:
+        if not isinstance(m, dict) or not isinstance(m.get("id"), str) or not m["id"]:
+            raise ParseError("OpenCode Go: a listed model has no ID")
+        model_id = m["id"]
+        if m.get("type") != "chat":
+            raise ParseError(f"OpenCode Go: {model_id} is of unknown type {m.get('type')!r}")
+        apis = m.get("api")
+        if not isinstance(apis, dict) or not apis:
+            raise ParseError(f"OpenCode Go: {model_id} lists no API")
+        unknown = set(apis) - set(OPENCODE_APIS) - OPENCODE_UNUSED_APIS
+        if unknown:
+            raise ParseError(f"OpenCode Go: {model_id} lists unknown APIs {sorted(unknown)}")
+        usable = [a for a in OPENCODE_APIS if a in apis]
+        chosen = m.get("recommended_api") if m.get("recommended_api") in usable else None
+        if chosen is None:
+            if len(usable) != 1:
+                raise ParseError(f"OpenCode Go: {model_id} has no API to read it through")
+            chosen = usable[0]
+        base_url = (apis[chosen] or {}).get("base_url") if isinstance(apis[chosen], dict) else None
+        if not isinstance(base_url, str) or not base_url.startswith("https://"):
+            raise ParseError(f"OpenCode Go: {model_id} has no base URL for {chosen}")
+
+        base, tiers, multipliers = opencode_prices(model_id, m.get("cost"))
+        peaks = []
+        factor = 1.0
+        for multiplier in multipliers:
+            kind, value = opencode_multiplier(model_id, multiplier, base, today)
             if kind == "peak":
-                peaks.append({"hours": [h for h in peak.groups() if h], "timezone": "UTC",
-                              "days": ["mon", "tue", "wed", "thu", "fri"], **values})
-            elif kind == "tier":
-                above = int(re.match(r"^>\s*([0-9]+)K", qualifier).group(1)) * 1000
-                tiers.append({"above_input_tokens": above, **values})
-        old = old_offerings.get(info["model_id"], {})
-        price_values = dict(base_row)
+                peaks.append(value)
+            elif kind == "factor":
+                factor *= value
+        if factor != 1.0:
+            if peaks:
+                raise ParseError(f"OpenCode Go: {model_id} combines a dated factor with peak prices")
+            base = {k: round(v * factor, 6) for k, v in base.items()}
+            tiers = [{k: (v if k == "above_input_tokens" else round(v * factor, 6)) for k, v in t.items()} for t in tiers]
+
+        go = only_keys(m.get("go"), ["monthly_usage", "training", "zdr", "limited_regions", "featured"], f"{model_id} plan data")
+        monthly = go.get("monthly_usage")
+        if monthly is not None:
+            if not isinstance(monthly, dict) or not monthly:
+                raise ParseError(f"OpenCode Go: unreadable monthly usage for {model_id}")
+            for plan_id, value in monthly.items():
+                if amount(value, f"{model_id} monthly limit") <= 0:
+                    raise ParseError(f"OpenCode Go: non-positive monthly limit for {model_id} on {plan_id}")
+        limits[model_id] = monthly
+
+        old = old_offerings.get(model_id, {})
+        price_values = dict(base)
         if tiers:
             price_values["tiers"] = tiers
         if peaks:
             price_values["peak"] = peaks
         offering = {
-            "model": old.get("model") or catalog_model_id(info["model_id"]),
-            "model_id": info["model_id"],
-            "api_type": info["api_type"],
-            "base_url": info["base_url"],
+            "model": old.get("model") or catalog_model_id(model_id),
+            "model_id": model_id,
+            "api_type": OPENCODE_APIS[chosen],
+            "base_url": base_url,
             "prices": stamp.merge(old.get("prices"), price_values),
         }
         for key in ("context_window", "output_window", "throughput"):
             if key in old:
                 offering[key] = old[key]
         offerings.append(offering)
-        stubs.append((offering["model"], name, vendor_of(info["model_id"])))
+        stubs.append((offering["model"], m.get("name") or model_id, vendor_of(model_id)))
+
+    if len({o["model_id"] for o in offerings}) != len(offerings):
+        raise ParseError("OpenCode Go: the model list names a model twice")
+    # Every limited model is limited on every plan: a model missing one is a
+    # list read wrong.
+    plan_ids = {frozenset(v) for v in limits.values() if v is not None}
+    if len(plan_ids) != 1:
+        raise ParseError("OpenCode Go: the models are not limited on the same plans")
+    plan_ids = sorted(next(iter(plan_ids)))
+
+    plan_prices = {}
+    for table in page_tables(page):
+        if table["rows"] and table["rows"][0][:2] == ["Plan", "Price"]:
+            for row in as_dicts(table, ["Plan", "Price"]):
+                plan_prices[row["Plan"].lower().replace(" ", "-")] = row["Price"]
+    if not plan_prices:
+        raise ParseError("OpenCode Go: the page no longer has its plan table")
+    if set(plan_prices) != set(plan_ids):
+        raise ParseError(f"OpenCode Go: the page prices the plans {sorted(plan_prices)}, the model list limits {plan_ids}")
 
     plans = []
     old_plans = {p["id"]: p for p in provider.get("plans") or []}
-    plan_prices = {}
-    for table in tables:
-        if columns(table)[:2] == ["Plan", "Price"]:
-            for row in as_dicts(table, ["Plan", "Price"]):
-                if "Price" in row:
-                    plan_prices[row["Plan"].lower().replace(" ", "-")] = row["Price"]
-    offered = {o["model_id"] for o in offerings}
-    for plan_id, monthly in limits.items():
-        budgets = {}
-        for name, monthly_limit in monthly.items():
-            info = by_name.get(name)
-            if info is None or info["model_id"] not in offered:
-                continue
-            budgets[info["model_id"]] = monthly_limit
+    for plan_id in plan_ids:
+        budgets = {model_id: (None if monthly is None else float(monthly[plan_id])) for model_id, monthly in limits.items()}
         # OpenCode Go meters one window per period, each model filling it at
         # its own rate: the window holds the plan's most common monthly limit,
         # and each model weighs by its own limit (a shared window).
         limited = [v for v in budgets.values() if v is not None]
-        if not limited:
-            raise ParseError(f"OpenCode Go: plan {plan_id!r} lists no limited model")
         reference = max(limited, key=lambda v: (limited.count(v), v))
         constraints = []
         for label, duration, share in (("5h", "5h", 0.2), ("weekly", "168h", 0.5), ("monthly", "720h", 1.0)):
@@ -450,19 +541,16 @@ def scrape_opencode_go(today, page=None):
                 "value_budget": round(reference * share, 2),
                 "model_budgets": {m: ({} if v is None else {"value_budget": round(v * share, 2)}) for m, v in budgets.items()},
             })
-        price_text = plan_prices.get(plan_id)
-        amount = money(price_text) if price_text else None
-        plan = {"id": plan_id, "name": plan_id.replace("-", " ").title().replace("Go ", "Go "), "constraints": constraints}
-        if amount is not None:
-            plan["price"] = {"amount": amount, "period": "month"}
+        plan = {"constraints": constraints}
+        price_amount = money(plan_prices[plan_id])
+        if price_amount is None:
+            raise ParseError(f"OpenCode Go: unreadable price {plan_prices[plan_id]!r} for plan {plan_id!r}")
+        plan["price"] = {"amount": price_amount, "period": "month"}
         old = old_plans.get(plan_id)
         stamped = stamp.merge(old and {k: old.get(k) for k in ("constraints", "price") if k in old} | {"date": old.get("date"), "source": old.get("source")},
-                              {k: plan[k] for k in ("constraints", "price") if k in plan},
-                              note="Each window is shared by every model, each weighing by its own budget: 20%, 50% and 100% of its published monthly limit "
-                                   "for the 5-hour, weekly and monthly windows. The window's own budget is the plan's most common monthly limit, at the same share. "
-                                   "The page does not say whether the windows slide or reset on a schedule, and \"monthly\" is approximated as 720 hours. "
-                                   "A model listed with no budget is free for a limited time.")
-        plans.append({"id": plan_id, "name": (old or {}).get("name") or plan["name"], **{k: v for k, v in stamped.items()}})
+                              plan, note=OPENCODE_PLANS_NOTE)
+        name = (old or {}).get("name") or plan_id.replace("-", " ").title()
+        plans.append({"id": plan_id, "name": name, **stamped})
 
     for stub in stubs:
         ensure_model(*stub)
