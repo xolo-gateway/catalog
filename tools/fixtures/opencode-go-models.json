@@ -3212,6 +3212,500 @@
     "limited_regions": false,
     "featured": false
    }
+  },
+  {
+   "id": "jev-1.14",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "Jev 1.14",
+   "type": "decision",
+   "canonical_id": "typesafe/jev-1.14.0",
+   "description": "System One model for fast, typed probabilistic decisions over text or structured state",
+   "family": "jev",
+   "open_weights": false,
+   "release_date": "2026-10-14",
+   "last_updated": "2026-10-14",
+   "modalities": {
+    "input": [
+     "text",
+     "image/png",
+     "image/jpeg"
+    ],
+    "output": [
+     "decision"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "structured_output": true,
+    "temperature": false,
+    "top_p": false,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 64000
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.042
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "systemone": {
+     "base_url": "https://opencode.ai/inference/go/systemone/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/typesafe-ai",
+      "opencodeai": "@opencode/ai/providers/opencode/decisions"
+     }
+    }
+   },
+   "recommended_api": "systemone",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": true,
+    "limited_regions": true,
+    "featured": false
+   }
+  },
+  {
+   "id": "gemini-decision-1",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "Gemini Decision 1",
+   "type": "decision",
+   "canonical_id": "google/gemini-decision-1",
+   "description": "Google's decision model that returns calibrated probabilities for typed yes/no, choice and score questions about text, images, audio, video and PDFs",
+   "family": "gemini-decision",
+   "open_weights": false,
+   "release_date": "2026-11-11",
+   "last_updated": "2026-11-11",
+   "modalities": {
+    "input": [
+     "text",
+     "image/png",
+     "image/jpeg",
+     "image/webp",
+     "image/heic",
+     "image/heif",
+     "image/gif",
+     "image/bmp",
+     "image/tiff",
+     "audio/wav",
+     "audio/mp3",
+     "audio/mpeg",
+     "audio/aiff",
+     "audio/aac",
+     "audio/ogg",
+     "audio/flac",
+     "audio/m4a",
+     "audio/opus",
+     "audio/webm",
+     "audio/l16",
+     "audio/alaw",
+     "audio/mulaw",
+     "video/mp4",
+     "video/mpeg",
+     "video/mov",
+     "video/avi",
+     "video/webm",
+     "video/wmv",
+     "video/x-flv",
+     "video/3gpp",
+     "application/pdf"
+    ],
+    "output": [
+     "decision"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "cache": false,
+    "temperature": false,
+    "top_p": false,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 262144
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.1
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "systemone": {
+     "base_url": "https://opencode.ai/inference/go/systemone/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/typesafe-ai",
+      "opencodeai": "@opencode/ai/providers/opencode/decisions"
+     },
+     "compatibility": {
+      "media_input": "state"
+     }
+    }
+   },
+   "recommended_api": "systemone",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": false,
+    "limited_regions": false,
+    "featured": false
+   }
+  },
+  {
+   "id": "gpt-6-luna-decision",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "GPT-6 Luna Decision",
+   "type": "decision",
+   "canonical_id": "openai/gpt-6-luna",
+   "description": "GPT-6 Luna on OpenAI's Decisions API, returning typed yes/no, choice and score answers about text and images",
+   "family": "gpt-luna",
+   "open_weights": false,
+   "knowledge": "2026-05-18",
+   "release_date": "2026-09-22",
+   "last_updated": "2026-09-22",
+   "modalities": {
+    "input": [
+     "text",
+     "image/png",
+     "image/jpeg",
+     "image/webp",
+     "image/gif"
+    ],
+    "output": [
+     "decision"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "cache": {
+     "implicit": {
+      "min_tokens": 1024
+     }
+    },
+    "temperature": true,
+    "top_p": true,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 1050000,
+    "input": 922000,
+    "output": 128000
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.1,
+      "cache": {
+       "read": 0.01,
+       "write": {
+        "30m": 0.125,
+        "12h": 0.25
+       }
+      },
+      "overrides": [
+       {
+        "when": {
+         "context": {
+          "gt": 272000
+         }
+        },
+        "price": 0.2,
+        "cache": {
+         "read": 0.02,
+         "write": {
+          "30m": 0.25,
+          "12h": 0.5
+         }
+        }
+       }
+      ]
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "systemone": {
+     "base_url": "https://opencode.ai/inference/go/systemone/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/typesafe-ai",
+      "opencodeai": "@opencode/ai/providers/opencode/decisions"
+     },
+     "compatibility": {
+      "media_input": "state"
+     }
+    }
+   },
+   "recommended_api": "systemone",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": false,
+    "limited_regions": false,
+    "featured": false
+   }
+  },
+  {
+   "id": "text-embedding-3-small",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "text-embedding-3-small",
+   "type": "embedding",
+   "canonical_id": "openai/text-embedding-3-small",
+   "description": "Small, efficient OpenAI text embedding model",
+   "family": "text-embedding",
+   "open_weights": false,
+   "release_date": "2024-01-25",
+   "last_updated": "2024-01-25",
+   "modalities": {
+    "input": [
+     "text"
+    ],
+    "output": [
+     "embedding"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "temperature": false,
+    "top_p": false,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 8192,
+    "output": 0
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.02
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "embeddings": {
+     "base_url": "https://opencode.ai/inference/go/openai/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/openai",
+      "opencodeai": "@opencode/ai/providers/openai/embeddings"
+     }
+    }
+   },
+   "recommended_api": "embeddings",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": false,
+    "limited_regions": false,
+    "featured": false
+   }
+  },
+  {
+   "id": "qwen3-embedding-8b",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "Qwen3 Embedding 8B",
+   "type": "embedding",
+   "canonical_id": "alibaba/qwen3-embedding-8b",
+   "description": "Multilingual text embedding model for retrieval, code search, classification, and clustering",
+   "family": "qwen-embedding",
+   "open_weights": true,
+   "release_date": "2025-06-05",
+   "last_updated": "2025-06-05",
+   "modalities": {
+    "input": [
+     "text"
+    ],
+    "output": [
+     "embedding"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "temperature": false,
+    "top_p": false,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 32768,
+    "output": 0
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.01
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "embeddings": {
+     "base_url": "https://opencode.ai/inference/go/openai/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/openai-compatible",
+      "opencodeai": "@opencode/ai/providers/openai-compatible/embeddings"
+     }
+    }
+   },
+   "recommended_api": "embeddings",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": false,
+    "limited_regions": false,
+    "featured": false
+   }
+  },
+  {
+   "id": "gemini-embedding-2",
+   "object": "model",
+   "created": 1795570322,
+   "owned_by": "opencode",
+   "name": "Gemini Embedding 2",
+   "type": "embedding",
+   "canonical_id": "google/gemini-embedding-2",
+   "description": "Multimodal embedding model mapping text, images, video, audio, and PDFs into a unified embedding space",
+   "family": "gemini-embedding",
+   "open_weights": false,
+   "knowledge": "2025-11",
+   "release_date": "2026-04-22",
+   "last_updated": "2026-04-22",
+   "modalities": {
+    "input": [
+     "text"
+    ],
+    "output": [
+     "embedding"
+    ]
+   },
+   "capabilities": {
+    "tools": {
+     "supported": false
+    },
+    "reasoning": {
+     "supported": false
+    },
+    "temperature": false,
+    "top_p": false,
+    "top_k": false,
+    "system_updates": false,
+    "effort_updates": false
+   },
+   "limit": {
+    "context": 8192,
+    "output": 3072
+   },
+   "cost": {
+    "text": {
+     "input": {
+      "price": 0.2
+     },
+     "output": {
+      "price": 0
+     }
+    }
+   },
+   "api": {
+    "embeddings": {
+     "base_url": "https://opencode.ai/inference/go/openai/v1",
+     "sdk": {
+      "aisdk": "@ai-sdk/openai-compatible",
+      "opencodeai": "@opencode/ai/providers/openai-compatible/embeddings"
+     }
+    }
+   },
+   "recommended_api": "embeddings",
+   "go": {
+    "monthly_usage": {
+     "go": 10,
+     "go-plus": 40,
+     "go-teams": 15
+    },
+    "training": false,
+    "zdr": false,
+    "limited_regions": false,
+    "featured": false
+   }
   }
  ]
 }

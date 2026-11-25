@@ -67,7 +67,7 @@ class OpenCodeGoTest(CatalogCopy):
     def test_reads_every_offering_and_plan(self):
         p = self.scrape()
         offerings = {o["model_id"]: o for o in p["offerings"]}
-        self.assertEqual(len(offerings), 30)
+        self.assertEqual(len(offerings), 33)
         self.assertEqual([plan["id"] for plan in p["plans"]], ["go", "go-plus", "go-teams"])
         self.assertEqual([plan["price"]["amount"] for plan in p["plans"]], [10.0, 40.0, 20.0])
         # One window per period, shared by every model, each weighing by its
@@ -101,6 +101,33 @@ class OpenCodeGoTest(CatalogCopy):
         self.assertEqual(argon["api_type"], "gemini")
         # The discount ends on 2026-12-01, when a factor of 2 starts.
         self.assertEqual((argon["prices"]["input"], argon["prices"]["output"]), (2.0, 10.0))
+
+    def test_reads_an_embedding_model_and_leaves_out_a_decision_model(self):
+        p = self.scrape()
+        offerings = {o["model_id"]: o for o in p["offerings"]}
+        # Embeddings: OpenAI's API, priced on input only, typed as such.
+        embed = offerings["qwen3-embedding-8b"]
+        self.assertEqual((embed["api_type"], embed["base_url"]), ("openai", "https://opencode.ai/inference/go/openai/v1"))
+        self.assertEqual((embed["prices"]["input"], embed["prices"]["output"]), (0.01, 0.0))
+        self.assertEqual(catalog.load_yaml(self.root / "models" / "qwen3-embedding-8b.yaml")["kind"], "embeddings")
+        self.assertEqual(p["plans"][0]["constraints"][2]["model_budgets"]["qwen3-embedding-8b"], {"value_budget": 10.0})
+        # A decision model has no API type in the catalog: no offering, no
+        # budget, no model file.
+        self.assertNotIn("jev-1.14", offerings)
+        self.assertNotIn("jev-1.14", p["plans"][0]["constraints"][2]["model_budgets"])
+        self.assertFalse((self.root / "models" / "jev-1.14.yaml").exists())
+
+    def test_refuses_an_unknown_model_type(self):
+        self.refuses(lambda d: listed(d, "glm-5.3").update(type="rerank"))
+
+    def test_refuses_a_chat_model_listed_with_the_embeddings_api_only(self):
+        def change(d):
+            m = listed(d, "glm-5.3")
+            m["api"] = {"embeddings": m["api"]["chat-completions"]}
+        self.refuses(change)
+
+    def test_refuses_an_embedding_model_priced_on_output(self):
+        self.refuses(lambda d: listed(d, "qwen3-embedding-8b")["cost"]["text"]["output"].update(price=0.01))
 
     def test_applies_a_dated_factor_once_it_starts(self):
         argon = {o["model_id"]: o for o in self.scrape(today="2026-12-01")["offerings"]}["gemini-4-argon"]
