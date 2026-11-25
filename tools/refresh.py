@@ -253,13 +253,20 @@ OPENCODE_APIS = {
 }
 OPENCODE_UNUSED_APIS = {"interactions"}
 
+# What Go lists besides chat models. An embedding model is read: it has one
+# API, OpenAI's embeddings, and is priced on input only. A decision model is
+# left out: it is called through an API the catalog has no type for yet.
+OPENCODE_EMBEDDINGS_APIS = {"embeddings": "openai"}
+OPENCODE_KINDS = {"chat": ("completion", OPENCODE_APIS), "embedding": ("embeddings", OPENCODE_EMBEDDINGS_APIS)}
+OPENCODE_UNREAD_TYPES = {"decision"}
+
 # Vendors of the model families OpenCode Go serves, by model ID prefix, for
 # the stub of a model the catalog does not know yet.
 VENDORS = {
     "glm": "Z.ai", "kimi": "Moonshot AI", "longcat": "Meituan", "step": "StepFun",
     "mimo": "Xiaomi", "minimax": "MiniMax", "qwen": "Alibaba Cloud", "deepseek": "DeepSeek",
     "hy": "Tencent", "grok": "xAI", "gpt": "OpenAI", "claude": "Anthropic", "gemini": "Google",
-    "muse": "Muse", "beam": "Beam", "iceman": "Iceman", "zai": "Z.ai",
+    "muse": "Muse", "beam": "Beam", "iceman": "Iceman", "zai": "Z.ai", "text-embedding": "OpenAI",
 }
 
 OPENCODE_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -444,15 +451,18 @@ def scrape_opencode_go(today, page=None, models=None):
         if not isinstance(m, dict) or not isinstance(m.get("id"), str) or not m["id"]:
             raise ParseError("OpenCode Go: a listed model has no ID")
         model_id = m["id"]
-        if m.get("type") != "chat":
+        if m.get("type") in OPENCODE_UNREAD_TYPES:
+            continue
+        if m.get("type") not in OPENCODE_KINDS:
             raise ParseError(f"OpenCode Go: {model_id} is of unknown type {m.get('type')!r}")
+        model_kind, known_apis = OPENCODE_KINDS[m["type"]]
         apis = m.get("api")
         if not isinstance(apis, dict) or not apis:
             raise ParseError(f"OpenCode Go: {model_id} lists no API")
-        unknown = set(apis) - set(OPENCODE_APIS) - OPENCODE_UNUSED_APIS
+        unknown = set(apis) - set(known_apis) - OPENCODE_UNUSED_APIS
         if unknown:
             raise ParseError(f"OpenCode Go: {model_id} lists unknown APIs {sorted(unknown)}")
-        usable = [a for a in OPENCODE_APIS if a in apis]
+        usable = [a for a in known_apis if a in apis]
         chosen = m.get("recommended_api") if m.get("recommended_api") in usable else None
         if chosen is None:
             if len(usable) != 1:
@@ -463,6 +473,8 @@ def scrape_opencode_go(today, page=None, models=None):
             raise ParseError(f"OpenCode Go: {model_id} has no base URL for {chosen}")
 
         base, tiers, multipliers = opencode_prices(model_id, m.get("cost"))
+        if model_kind == "embeddings" and (base["output"] or any(t["output"] for t in tiers)):
+            raise ParseError(f"OpenCode Go: the embedding model {model_id} is priced on output")
         peaks = []
         factor = 1.0
         for multiplier in multipliers:
@@ -496,7 +508,7 @@ def scrape_opencode_go(today, page=None, models=None):
         offering = {
             "model": old.get("model") or catalog_model_id(model_id),
             "model_id": model_id,
-            "api_type": OPENCODE_APIS[chosen],
+            "api_type": known_apis[chosen],
             "base_url": base_url,
             "prices": stamp.merge(old.get("prices"), price_values),
         }
@@ -504,7 +516,7 @@ def scrape_opencode_go(today, page=None, models=None):
             if key in old:
                 offering[key] = old[key]
         offerings.append(offering)
-        stubs.append((offering["model"], m.get("name") or model_id, vendor_of(model_id)))
+        stubs.append((offering["model"], m.get("name") or model_id, vendor_of(model_id), model_kind))
 
     if len({o["model_id"] for o in offerings}) != len(offerings):
         raise ParseError("OpenCode Go: the model list names a model twice")
