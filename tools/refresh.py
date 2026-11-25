@@ -763,14 +763,18 @@ def mistral_model(obj):
     if not isinstance(slug, str) or not MISTRAL_NAME.match(slug):
         raise ParseError(f"Mistral: unreadable model slug {slug!r}")
     title, status, names = obj.get("name"), obj.get("status"), obj.get("modelIds")
-    if not isinstance(title, str) or not title.strip():
-        raise ParseError(f"Mistral {slug}: the model has no name")
     if status not in MISTRAL_STATUSES:
         raise ParseError(f"Mistral {slug}: unknown status {status!r}")
+    # Nothing else of a retired model is read: whatever it states, it is
+    # not one to import.
+    if status == "Retired":
+        return None
+    if not isinstance(title, str) or not title.strip():
+        raise ParseError(f"Mistral {slug}: the model has no name")
     if not isinstance(names, list) or not all(isinstance(n, str) and MISTRAL_NAME.match(n) for n in names):
         raise ParseError(f"Mistral {slug}: unreadable model names {names!r}")
     # A model without an API name is one the API does not serve.
-    if status == "Retired" or not names:
+    if not names:
         return None
     if status == "Deprecated":
         return {"names": names, "deprecated": True}
@@ -783,28 +787,38 @@ def mistral_model(obj):
         return None
     kind = kinds[0]
 
-    free, pricing = obj.get("isFree"), obj.get("pricing")
-    if not isinstance(free, bool) or not isinstance(pricing, list):
-        raise ParseError(f"Mistral {slug}: unreadable prices")
+    free = obj.get("isFree")
+    if not isinstance(free, bool):
+        raise ParseError(f"Mistral {slug}: the model does not say whether it is free")
     if free:
+        # A free model's price entries are not read: the page states them in
+        # another shape, when it states any.
         prices = {"input": 0.0, "output": 0.0}
     else:
+        pricing = obj.get("pricing")
+        if not isinstance(pricing, list) or not all(isinstance(entry, dict) for entry in pricing):
+            raise ParseError(f"Mistral {slug}: unreadable prices")
+        # Priced, even in part, in anything but tokens (minutes, pages,
+        # characters): not a model to import.
+        if any(entry.get("unit") != "/M Tokens" for entry in pricing):
+            return None
         prices = {}
         for entry in pricing:
-            if not isinstance(entry, dict) or entry.get("direction") not in MISTRAL_PRICE_LABELS:
+            direction, value, label = entry.get("direction"), entry.get("priceUsd"), entry.get("label")
+            if direction not in MISTRAL_PRICE_LABELS:
                 raise ParseError(f"Mistral {slug}: unreadable price {entry!r}")
-            # Priced in anything but tokens (minutes, pages, characters), or
-            # under a label Xolo does not know: not a model to import.
-            if entry.get("unit") != "/M Tokens":
-                return None
-            value = entry.get("priceUsd")
             if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
                 raise ParseError(f"Mistral {slug}: unreadable price {entry!r}")
-            label = entry.get("label")
-            key = MISTRAL_PRICE_LABELS[entry["direction"]].get(label.strip().lower() if isinstance(label, str) else None)
+            # An unlabelled entry is the side's own price. A label the
+            # scraper does not know, or one read twice, is an error: leaving
+            # the model out would drop a price nobody looked at.
+            if label is None:
+                label = direction
+            key = MISTRAL_PRICE_LABELS[direction].get(label.strip().lower()) if isinstance(label, str) else None
             if key is None or key in prices:
-                return None
+                raise ParseError(f"Mistral {slug}: unknown or repeated price label {label!r}")
             prices[key] = float(value)
+        # A model the page does not price on both sides yet.
         if "input" not in prices or (kind == "completion" and "output" not in prices):
             return None
         prices.setdefault("output", 0.0)

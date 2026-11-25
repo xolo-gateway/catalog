@@ -423,6 +423,38 @@ class MistralTest(CatalogCopy):
             m["pricing"][0]["priceUsd"] = "cheap"
         self.refuses(listed)
 
+    def test_refuses_an_unknown_price_label(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][1]["label"] = "Batch input"
+        self.refuses(listed)
+
+    def test_refuses_a_price_label_read_twice(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][1]["label"] = "Input"
+        self.refuses(listed)
+
+    def test_reads_an_unlabelled_price_as_its_side(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][0]["label"] = None
+        self.assertEqual(self.scrape(listed)["mistral-large-4"]["prices"]["input"], 0.7)
+
+    def test_reads_a_free_model_at_zero_whatever_its_price_entries(self):
+        listed = self.listed()
+        self.change(listed, "mistral-large-4-0", isFree=True, pricing=None)
+        prices = self.scrape(listed)["mistral-large-4"]["prices"]
+        self.assertEqual((prices["input"], prices["output"]), (0.0, 0.0))
+        self.assertNotIn("cached_input", prices)
+
+    def test_refuses_a_model_not_saying_whether_it_is_free(self):
+        self.refuses(self.change(self.listed(), "mistral-large-4-0", isFree=None))
+
+    def test_reads_nothing_else_of_a_retired_model(self):
+        listed = self.change(self.listed(), "mistral-next", name=None, modelIds=["Not An ID"])
+        self.assertIn("mistral-large-4", self.scrape(listed))
+
     def test_refuses_an_unknown_status(self):
         self.refuses(self.change(self.listed(), "mistral-large-4-0", status="Sunset"))
 
