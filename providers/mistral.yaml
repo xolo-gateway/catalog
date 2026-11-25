@@ -14,6 +14,11 @@ offerings:
     status: published
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
+  context_window:
+    value: 128000
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-11-25'
 - model: codestral-embed-2505
   model_id: codestral-embed-2505
   prices:
@@ -22,6 +27,11 @@ offerings:
     status: published
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
+  context_window:
+    value: 8000
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-11-25'
 - model: deepseek-v4.1-flash
   model_id: deepseek-v4-1-flash-1017
   prices:
@@ -32,11 +42,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 1048576
+    value: 1000000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: ministral-14b-2512
   model_id: ministral-14b-2512
   prices:
@@ -46,11 +55,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 262144
+    value: 256000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: ministral-3b-2512
   model_id: ministral-3b-2512
   prices:
@@ -60,11 +68,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 262144
+    value: 256000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: ministral-8b-2512
   model_id: ministral-8b-2512
   prices:
@@ -74,11 +81,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 262144
+    value: 256000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: mistral-embed-2312
   model_id: mistral-embed-2312
   prices:
@@ -87,6 +93,11 @@ offerings:
     status: published
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
+  context_window:
+    value: 8000
+    status: published
+    source: https://docs.mistral.ai/models
+    date: '2026-11-25'
 - model: mistral-large-2512
   model_id: mistral-large-2512
   prices:
@@ -111,11 +122,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 1048576
+    value: 1000000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: mistral-medium-3-5
   model_id: mistral-medium-3-5
   prices:
@@ -139,11 +149,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 262144
+    value: 256000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: glm-5.3
   model_id: zai-glm-5-3
   prices:
@@ -154,11 +163,10 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 1048576
+    value: 1000000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
 - model: glm-5.3-flash
   model_id: zai-glm-5-3-flash
   prices:
@@ -169,8 +177,7 @@ offerings:
     source: https://docs.mistral.ai/models
     date: '2026-10-29'
   context_window:
-    value: 1048576
+    value: 1000000
     status: published
     source: https://docs.mistral.ai/models
-    date: '2026-10-29'
-    note: The card states the size in k tokens, read as multiples of 1024.
+    date: '2026-11-25'
