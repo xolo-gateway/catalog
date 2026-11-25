@@ -688,12 +688,21 @@ def scrape_openrouter(today, document=None, endpoints=None):
 # ── Mistral ──────────────────────────────────────────────────────────────────
 
 MISTRAL_DOCS = "https://docs.mistral.ai"
-MISTRAL_INDEX_URL = MISTRAL_DOCS + "/models/model-cards/mistral-medium-3-5-26-04"
-MISTRAL_CARD_URL = MISTRAL_DOCS + "/models/model-cards/{}"
+# One page lists every model, with its API names, status, features, prices
+# and context size, as the data its components are rendered from.
 MISTRAL_SOURCE = MISTRAL_DOCS + "/models"
-# Fewer priced models than this means a page read wrong, not a catalog that
-# shrank overnight.
+# Fewer models listed, or fewer priced, than these means a page read wrong,
+# not a catalog that shrank overnight.
+MISTRAL_MIN_LISTED = 20
 MISTRAL_MIN_PRICED = 10
+MISTRAL_STATUSES = {"GA", "PublicPreview", "Deprecated", "Retired"}
+# The API a model is called through decides what Xolo can import: chat
+# completions, or embeddings priced on input only.
+MISTRAL_KINDS = {"chat-completions": "completion", "embeddings": "embeddings"}
+# The labels a price is listed under, by the side it is listed on.
+MISTRAL_PRICE_LABELS = {"input": {"input": "input", "cached input": "cached_input"}, "output": {"output": "output"}}
+MISTRAL_NAME = re.compile(r"^[a-z0-9][a-z0-9.-]*$")
+MISTRAL_MODEL_START = re.compile(r'\{"id":[0-9]+,"slug":"')
 # The third-party models Mistral hosts, by its API name, and the catalog
 # model each one is: their figures are already sourced there.
 MISTRAL_HOSTED = {
@@ -705,7 +714,7 @@ MISTRAL_HOSTED = {
 
 def next_payload(page):
     """The data a Next.js page streams to the browser (self.__next_f), as
-    one text: the docs' cards carry their figures there, as JSON."""
+    one text: the docs carry their models' figures there, as JSON."""
     decoder = json.JSONDecoder()
     chunks = []
     marker = "self.__next_f.push("
@@ -724,140 +733,109 @@ def next_payload(page):
     return "".join(chunks)
 
 
-def json_after(payload, marker, opening):
-    """Decodes the JSON value that follows marker, which must start with
-    opening ('[' or '{')."""
-    i = payload.find(marker)
-    if i < 0:
-        raise ParseError(f"no {marker!r} in the page")
-    rest = payload[i + len(marker):]
-    if not rest.startswith(opening):
-        raise ParseError(f"{marker!r} is not followed by {opening!r}")
-    try:
-        value, _ = json.JSONDecoder().raw_decode(rest)
-    except ValueError as error:
-        raise ParseError(f"unreadable JSON after {marker!r}: {error}") from error
-    return value
-
-
-def mistral_cards(index_page):
-    """The slugs and titles of the model cards the docs' navigation lists."""
-    cards = json_after(next_payload(index_page), '"metadata":{"label":"Model Cards"},"children":', "[")
+def mistral_listed(page):
+    """Every model object the page streams, as stated. A model is there
+    once per component showing it (its own entry, the models it replaces,
+    the models related to it): the copies are all returned."""
+    payload = next_payload(page)
+    decoder = json.JSONDecoder()
     listed = []
-    for card in cards:
-        slug = (card.get("slug") or [None])[-1]
-        title = (card.get("metadata") or {}).get("title")
-        if not slug or not title or not re.match(r"^[a-z0-9][a-z0-9.-]*$", slug):
-            raise ParseError(f"Mistral: unreadable model card entry {card!r}")
-        listed.append((slug, title))
-    if len(listed) < 20:
-        raise ParseError(f"Mistral: {len(listed)} model cards is not the full list")
+    for start in MISTRAL_MODEL_START.finditer(payload):
+        try:
+            obj, _ = decoder.raw_decode(payload, start.start())
+        except ValueError as error:
+            raise ParseError(f"Mistral: unreadable model entry: {error}") from error
+        # Other documents of the page (a licence, a capability) have an ID
+        # and a slug too: a model is the one stating its API names.
+        if isinstance(obj, dict) and "modelIds" in obj:
+            listed.append(obj)
     return listed
 
 
-TOKEN_COUNT = re.compile(r"^([0-9]+(?:\.[0-9]+)?)([kKmM])$")
-
-
-def context_tokens(text):
-    """A card's context size: '256k' → 262144, '1M' → 1048576."""
-    m = TOKEN_COUNT.match(text.strip())
-    if not m:
-        raise ParseError(f"unreadable context size {text!r}")
-    unit = 1024 if m.group(2).lower() == "k" else 1024 * 1024
-    return int(float(m.group(1)) * unit)
-
-
-def mistral_card(page, slug):
-    """What one card states: the model's API names, whether it is retired,
-    its token prices and its context size. None for a card Xolo cannot
-    import as a priced model (retired, or not priced in input and output
-    tokens), which is left out. A deprecated model's card gives its names
-    only, with deprecated set: the model is served until its retirement,
-    but the card no longer states a price."""
-    payload = next_payload(page)
-    # A retired or deprecated model's card carries a badge saying so. The
-    # badge names its type, or, on the older cards, says it in its text. A
-    # retired model is no longer one to import, whatever else the card
-    # states: any sign of retirement wins over a deprecation.
-    # The flag is the card's own when read from its header on.
-    at = max(payload.find('{"names":'), 0)
-    if re.search(r'"data-badge-type":"retired"|"children":"Retired"', payload) or '"isRetired":true' in payload[at:]:
-        return None
-    deprecated = re.search(r'"data-badge-type":"deprecated"|"children":"Deprecated"', payload)
-    names = json_after(payload, '{"names":', "[")
-    # A card without an API name describes a model the API does not serve.
-    if names == []:
-        return None
-    if not all(isinstance(n, str) and re.match(r"^[a-z0-9][a-z0-9.-]*$", n) for n in names):
+def mistral_model(obj):
+    """What the page states of one model: its API names, its token prices,
+    its context size and its kind. None for a model Xolo cannot import as a
+    priced one (retired, not served by the API, called through another API
+    than chat completions or embeddings, or not priced in input and output
+    tokens), which is left out. A deprecated model gives its names only,
+    with deprecated set: it is served until its retirement."""
+    slug = obj.get("slug")
+    if not isinstance(slug, str) or not MISTRAL_NAME.match(slug):
+        raise ParseError(f"Mistral: unreadable model slug {slug!r}")
+    title, status, names = obj.get("name"), obj.get("status"), obj.get("modelIds")
+    if not isinstance(title, str) or not title.strip():
+        raise ParseError(f"Mistral {slug}: the model has no name")
+    if status not in MISTRAL_STATUSES:
+        raise ParseError(f"Mistral {slug}: unknown status {status!r}")
+    if not isinstance(names, list) or not all(isinstance(n, str) and MISTRAL_NAME.match(n) for n in names):
         raise ParseError(f"Mistral {slug}: unreadable model names {names!r}")
-    if deprecated:
+    # A model without an API name is one the API does not serve.
+    if status == "Retired" or not names:
+        return None
+    if status == "Deprecated":
         return {"names": names, "deprecated": True}
-    # The price block, wherever it sits among its component's props, after
-    # the card's header; a second copy refers to it as "$…" and is skipped.
-    i = payload.find('"pricing":{', at)
-    if i < 0:
-        raise ParseError(f"Mistral {slug}: the card states no price")
-    card = json_after(payload[i:], '"pricing":', "{")
-    retired = re.search(r'"isRetired":(true|false)', payload[i:])
-    if not retired:
-        raise ParseError(f"Mistral {slug}: the card does not say whether the model is retired")
-    if retired.group(1) == "true":
+
+    features = obj.get("features")
+    if not isinstance(features, list) or not all(isinstance(f, str) for f in features):
+        raise ParseError(f"Mistral {slug}: unreadable features {features!r}")
+    kinds = [kind for feature, kind in MISTRAL_KINDS.items() if feature in features]
+    if not kinds:
         return None
+    kind = kinds[0]
 
-    # The API a model is called through decides what Xolo can import: chat
-    # completions, or embeddings priced on input only.
-    if "/v1/chat/completions" in payload:
-        kind = "completion"
-    elif "/v1/embeddings" in payload:
-        kind = "embeddings"
-    else:
-        return None
-
-    def token_prices(side):
-        """The token prices of one side, by label: an unlabelled single
-        entry is the side's own price. None when the side is priced in
-        anything but tokens, or under a label Xolo does not know."""
-        prices = {}
-        for entry in card.get(side) or []:
-            if entry.get("denominator") != "/M Tokens":
-                return None
-            value = entry.get("price")
-            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
-                raise ParseError(f"Mistral {slug}: unreadable {side} price {entry!r}")
-            label = (entry.get("label") or side).strip().lower()
-            if label not in (side, "cached input") or label in prices:
-                return None
-            prices[label] = float(value)
-        return prices
-
-    if card.get("free") is True:
+    free, pricing = obj.get("isFree"), obj.get("pricing")
+    if not isinstance(free, bool) or not isinstance(pricing, list):
+        raise ParseError(f"Mistral {slug}: unreadable prices")
+    if free:
         prices = {"input": 0.0, "output": 0.0}
     else:
-        inputs, outputs = token_prices("input"), token_prices("output")
-        if inputs is None or outputs is None or "input" not in inputs:
+        prices = {}
+        for entry in pricing:
+            if not isinstance(entry, dict) or entry.get("direction") not in MISTRAL_PRICE_LABELS:
+                raise ParseError(f"Mistral {slug}: unreadable price {entry!r}")
+            # Priced in anything but tokens (minutes, pages, characters), or
+            # under a label Xolo does not know: not a model to import.
+            if entry.get("unit") != "/M Tokens":
+                return None
+            value = entry.get("priceUsd")
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                raise ParseError(f"Mistral {slug}: unreadable price {entry!r}")
+            label = entry.get("label")
+            key = MISTRAL_PRICE_LABELS[entry["direction"]].get(label.strip().lower() if isinstance(label, str) else None)
+            if key is None or key in prices:
+                return None
+            prices[key] = float(value)
+        if "input" not in prices or (kind == "completion" and "output" not in prices):
             return None
-        if kind == "completion" and "output" not in outputs:
-            return None
-        prices = {"input": inputs["input"], "output": outputs.get("output", 0.0)}
-        if "cached input" in inputs:
-            prices["cached_input"] = inputs["cached input"]
+        prices.setdefault("output", 0.0)
+        prices = {key: prices[key] for key in ("input", "output", "cached_input") if key in prices}
 
-    # Not every card states a context size: an absent one is left unknown,
+    # Not every model states a context size: an absent one is left unknown,
     # one that is there must read.
-    context = None
-    if '"contextSize"' in payload:
-        m = re.search(r'"contextSize",\{[^{}]*"children":\["\$","span",null,\{[^{}]*"children":"([^"]+)"', payload)
-        if not m:
-            raise ParseError(f"Mistral {slug}: unreadable context size")
-        context = context_tokens(m.group(1))
-    return {"names": names, "prices": prices, "context": context, "kind": kind}
+    context = obj.get("contextWindow")
+    if context is not None and (isinstance(context, bool) or not isinstance(context, int) or context <= 0):
+        raise ParseError(f"Mistral {slug}: unreadable context size {context!r}")
+    return {"names": names, "title": title.strip(), "prices": prices, "context": context, "kind": kind}
 
 
-def scrape_mistral(today, pages=None, index=None):
-    """Refreshes the models Mistral's docs list as priced in tokens. pages
-    and index, for the tests, give the cards by URL and the page holding
-    the navigation."""
-    get = (lambda url: pages[url]) if pages is not None else fetch
+def mistral_models(page):
+    """The models the page lists, by slug, each read by mistral_model. The
+    copies of a model must read the same."""
+    models = {}
+    for obj in mistral_listed(page):
+        model = mistral_model(obj)
+        slug = obj["slug"]
+        if slug in models and models[slug] != model:
+            raise ParseError(f"Mistral {slug}: the page states the model twice, differently")
+        models[slug] = model
+    if len(models) < MISTRAL_MIN_LISTED:
+        raise ParseError(f"Mistral: {len(models)} models is not the full list")
+    return models
+
+
+def scrape_mistral(today, page=None):
+    """Refreshes the models Mistral's docs list as priced in tokens. page,
+    for the tests, is the page listing the models."""
     stamp = Stamp(today, MISTRAL_SOURCE)
     path = ROOT / "providers" / "mistral.yaml"
     old_offerings = {}
@@ -865,39 +843,38 @@ def scrape_mistral(today, pages=None, index=None):
         old_offerings = {o["model_id"]: o for o in load_yaml(path).get("offerings") or []}
 
     offerings, stubs, seen, deprecated = [], [], set(), set()
-    for slug, title in mistral_cards(index if index is not None else get(MISTRAL_INDEX_URL)):
-        if pages is None:
-            time.sleep(0.5)
-        card = mistral_card(get(MISTRAL_CARD_URL.format(slug)), slug)
-        if card is None:
+    models = mistral_models(page if page is not None else fetch(MISTRAL_SOURCE))
+    for slug in sorted(models):
+        model = models[slug]
+        if model is None:
             continue
-        model_id = card["names"][0]
-        if card.get("deprecated"):
+        model_id = model["names"][0]
+        if model.get("deprecated"):
             deprecated.add(model_id)
             continue
         if model_id in seen:
-            raise ParseError(f"Mistral: {model_id} is listed by two cards")
+            raise ParseError(f"Mistral: {model_id} is listed by two models")
         seen.add(model_id)
         old = old_offerings.get(model_id, {})
         offering = {
             "model": old.get("model") or MISTRAL_HOSTED.get(model_id, model_id),
             "model_id": model_id,
-            "prices": stamp.merge(old.get("prices"), card["prices"]),
+            "prices": stamp.merge(old.get("prices"), model["prices"]),
         }
-        if card["context"] is not None:
-            offering["context_window"] = stamp.merge(old.get("context_window"), {"value": card["context"]},
-                                                     note="The card states the size in k tokens, read as multiples of 1024.")
+        if model["context"] is not None:
+            offering["context_window"] = stamp.merge(old.get("context_window"), {"value": model["context"]})
         offerings.append(offering)
-        stubs.append((offering["model"], title, vendor_of(model_id) if vendor_of(model_id) != "Unknown" else "Mistral AI", card["kind"]))
+        vendor = vendor_of(model_id)
+        stubs.append((offering["model"], model["title"], vendor if vendor != "Unknown" else "Mistral AI", model["kind"]))
     # A deprecated model is kept as last read until it is retired, unless a
-    # current card prices it; one never read before is not added.
+    # current model prices it; one never read before is not added.
     for model_id in sorted(deprecated - seen):
         if model_id in old_offerings:
             offerings.append(old_offerings[model_id])
     # The deprecated models kept count toward the list: a deprecation does
     # not shorten it, a page read wrong does. But most of the list must have
-    # been read this run, or a misread taking every card for deprecated would
-    # write the last prices back as a success.
+    # been read this run, or a misread taking every model for deprecated
+    # would write the last prices back as a success.
     if len(offerings) < MISTRAL_MIN_PRICED:
         raise ParseError(f"Mistral: {len(offerings)} priced models is not the full list")
     if 2 * len(seen) < len(offerings):
