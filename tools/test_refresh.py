@@ -111,11 +111,19 @@ class OpenCodeGoTest(CatalogCopy):
         self.assertEqual((embed["prices"]["input"], embed["prices"]["output"]), (0.01, 0.0))
         self.assertEqual(catalog.load_yaml(self.root / "models" / "qwen3-embedding-8b.yaml")["kind"], "embeddings")
         self.assertEqual(p["plans"][0]["constraints"][2]["model_budgets"]["qwen3-embedding-8b"], {"value_budget": 10.0})
+        self.assertEqual(
+            sorted(m for m in offerings if "embedding" in m),
+            ["gemini-embedding-2", "qwen3-embedding-8b", "text-embedding-3-small"],
+        )
+        self.assertEqual(catalog.load_yaml(self.root / "models" / "text-embedding-3-small.yaml")["vendor"], "OpenAI")
         # A decision model has no API type in the catalog: no offering, no
         # budget, no model file.
-        self.assertNotIn("jev-1.14", offerings)
-        self.assertNotIn("jev-1.14", p["plans"][0]["constraints"][2]["model_budgets"])
-        self.assertFalse((self.root / "models" / "jev-1.14.yaml").exists())
+        for model_id in ("jev-1.14", "gemini-decision-1", "gpt-6-luna-decision"):
+            self.assertNotIn(model_id, offerings)
+            for plan in p["plans"]:
+                for constraint in plan["constraints"]:
+                    self.assertNotIn(model_id, constraint["model_budgets"])
+            self.assertFalse((self.root / "models" / f"{model_id}.yaml").exists())
 
     def test_refuses_an_unknown_model_type(self):
         self.refuses(lambda d: listed(d, "glm-5.3").update(type="rerank"))
