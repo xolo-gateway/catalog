@@ -1,0 +1,4 @@
+id: qwen3-embedding-8b
+name: Qwen3 Embedding 8B
+vendor: Alibaba Cloud
+kind: embeddings

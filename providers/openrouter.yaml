@@ -397,9 +397,9 @@ offerings:
 - model: hy3
   model_id: tencent/hy3
   prices:
-    input: 0.132
-    cached_input: 0.033
-    output: 0.528
+    input: 0.0825
+    cached_input: 0.020625
+    output: 0.33
     status: estimated
     source: https://openrouter.ai/api/v1/models/tencent/hy3/endpoints
     date: '2026-11-25'
@@ -613,7 +613,7 @@ offerings:
 - model: glm-5.3-flash
   model_id: z-ai/glm-5.3-flash
   prices:
-    input: 0.127
+    input: 0.128
     cached_input: 0.03
     output: 0.5
     status: estimated
