@@ -348,117 +348,170 @@ if __name__ == "__main__":
 
 
 class MistralTest(CatalogCopy):
-    def card(self, slug):
+    def page(self):
         import gzip
-        return gzip.decompress((FIXTURES / "mistral" / f"{slug}.html.gz").read_bytes()).decode("utf-8")
+        return gzip.decompress((FIXTURES / "mistral-models.html.gz").read_bytes()).decode("utf-8")
 
-    def pages(self, **overrides):
-        """Every card the index lists reads as the retired one, but those the
-        test gives."""
-        # Any card carries the navigation; the medium one is the index URL
-        # itself, so another stands for it here.
-        index = self.card("mistral-large-4-0")
-        retired = self.card("codestral-25-01")
-        known = {s: self.card(s) for s in ("mistral-medium-3-5-26-04", "mistral-large-4-0", "mistral-embed-23-12",
-                                           "devstral-2-25-12", "ocr-4-1", "shieldstral-1-0")}
-        known.update(overrides)
+    def listed(self):
+        """The model objects of the frozen page, to change and wrap again."""
+        return refresh.mistral_listed(self.page())
 
-        class Pages(dict):
-            def __missing__(self, url):
-                slug = url.rsplit("/", 1)[-1]
-                return known.get(slug, retired)
+    def wrap(self, models):
+        """A page streaming models the way the docs do."""
+        payload = json.dumps(models, separators=(",", ":"))
+        return "<script>self.__next_f.push(" + json.dumps([1, payload]) + ")</script>"
 
-        return Pages(), index
+    def models(self, value):
+        """Every model object under value, the ones a model holds (the model
+        replacing it, the models related to it) included."""
+        if isinstance(value, dict):
+            if "modelIds" in value:
+                yield value
+            for child in value.values():
+                yield from self.models(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from self.models(child)
 
-    def setUp(self):
-        super().setUp()
-        self.saved_floor = refresh.MISTRAL_MIN_PRICED
-        refresh.MISTRAL_MIN_PRICED = 3
+    def copies(self, listed, slug):
+        copies = [m for m in self.models(listed) if m["slug"] == slug]
+        self.assertTrue(copies)
+        return copies
 
-    def tearDown(self):
-        refresh.MISTRAL_MIN_PRICED = self.saved_floor
-        super().tearDown()
+    def change(self, listed, slug, **fields):
+        """Changes every copy of a model."""
+        for m in self.copies(listed, slug):
+            m.update(fields)
+        return listed
 
-    def test_reads_the_priced_cards_and_leaves_out_the_others(self):
-        pages, index = self.pages()
-        refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
-        offers = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
-        self.assertEqual(sorted(offers), ["mistral-embed-2312", "mistral-large-4", "mistral-medium-3-5"])
+    def scrape(self, listed=None, today="2026-11-25"):
+        refresh.scrape_mistral(today, page=self.wrap(listed) if listed is not None else self.page())
+        return {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
 
-        medium = offers["mistral-medium-3-5"]
-        self.assertEqual((medium["prices"]["input"], medium["prices"]["output"]), (1.5, 7.5))
-        self.assertEqual(medium["context_window"]["value"], 262144)
+    def refuses(self, listed):
+        with self.assertRaises(refresh.ParseError):
+            self.scrape(listed)
+
+    def test_reads_the_priced_models_and_leaves_out_the_others(self):
+        offers = self.scrape()
+        for model_id in ("codestral-2508", "mistral-embed-2312", "mistral-large-4", "mistral-small-2603", "zai-glm-5-3"):
+            self.assertIn(model_id, offers)
+        # Retired, priced by the page or the minute, or called through
+        # another API: left out.
+        for model_id in ("mistral-next", "mistral-ocr-4-1", "voxtral-small-2507", "mistral-moderation-2603"):
+            self.assertNotIn(model_id, offers)
+
+        large = offers["mistral-large-4"]
+        self.assertEqual((large["prices"]["input"], large["prices"]["output"]), (0.7, 2.1))
         # Labelled entries: the cached price is read apart.
-        self.assertEqual(offers["mistral-large-4"]["prices"]["cached_input"], 0.07)
+        self.assertEqual(large["prices"]["cached_input"], 0.07)
+        self.assertEqual(large["context_window"]["value"], 1_000_000)
+        # A hosted third-party model is the catalog's own.
+        self.assertEqual(offers["zai-glm-5-3"]["model"], "glm-5.3")
         # Embeddings: priced on input only, typed as such.
-        self.assertEqual(offers["mistral-embed-2312"]["prices"]["output"], 0.0)
-        embed = catalog.load_yaml(self.root / "models" / "mistral-embed-2312.yaml")
-        self.assertEqual(embed["kind"], "embeddings")
+        embed = offers["mistral-embed-2312"]["prices"]
+        self.assertEqual((embed["input"], embed["output"]), (0.1, 0.0))
+        self.assertEqual(catalog.load_yaml(self.root / "models" / "mistral-embed-2312.yaml")["kind"], "embeddings")
+
+    def test_reads_the_wrapped_models_like_the_page(self):
+        first = self.scrape()
+        self.assertEqual(self.scrape(self.listed()), first)
 
     def test_refuses_an_unreadable_price(self):
-        page = self.card("mistral-medium-3-5-26-04").replace('\\"price\\":1.5', '\\"price\\":\\"cheap\\"', 1)
-        pages, index = self.pages(**{"mistral-medium-3-5-26-04": page})
-        with self.assertRaises(refresh.ParseError):
-            refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][0]["priceUsd"] = "cheap"
+        self.refuses(listed)
 
-    def test_reads_a_card_with_its_price_among_other_props(self):
-        # Since October 31, 2026 the price block follows a heading in its
-        # component's props.
-        card = refresh.mistral_card(self.card("codestral-25-08"), "codestral-25-08")
-        self.assertEqual(card["names"], ["codestral-2508", "codestral-latest"])
-        self.assertEqual(card["prices"], {"input": 0.3, "output": 0.9})
+    def test_refuses_an_unknown_price_label(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][1]["label"] = "Batch input"
+        self.refuses(listed)
 
-    def test_reads_a_card_badged_deprecated_by_type(self):
-        # The badge names its type rather than saying it in its text.
-        card = refresh.mistral_card(self.card("mistral-large-3-25-12"), "mistral-large-3-25-12")
-        self.assertEqual(card, {"names": ["mistral-large-2512", "mistral-large-latest"], "deprecated": True})
+    def test_refuses_a_price_label_read_twice(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][1]["label"] = "Input"
+        self.refuses(listed)
+
+    def test_reads_an_unlabelled_price_as_its_side(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][0]["label"] = None
+        self.assertEqual(self.scrape(listed)["mistral-large-4"]["prices"]["input"], 0.7)
+
+    def test_reads_a_free_model_at_zero_whatever_its_price_entries(self):
+        listed = self.listed()
+        self.change(listed, "mistral-large-4-0", isFree=True, pricing=None)
+        prices = self.scrape(listed)["mistral-large-4"]["prices"]
+        self.assertEqual((prices["input"], prices["output"]), (0.0, 0.0))
+        self.assertNotIn("cached_input", prices)
+
+    def test_refuses_a_model_not_saying_whether_it_is_free(self):
+        self.refuses(self.change(self.listed(), "mistral-large-4-0", isFree=None))
+
+    def test_reads_nothing_else_of_a_retired_model(self):
+        listed = self.change(self.listed(), "mistral-next", name=None, modelIds=["Not An ID"])
+        self.assertIn("mistral-large-4", self.scrape(listed))
+
+    def test_refuses_an_unknown_status(self):
+        self.refuses(self.change(self.listed(), "mistral-large-4-0", status="Sunset"))
+
+    def test_refuses_a_model_stated_twice_differently(self):
+        listed = self.listed()
+        copy = json.loads(json.dumps(next(m for m in listed if m["slug"] == "mistral-large-4-0")))
+        copy["pricing"][0]["priceUsd"] = 7
+        self.refuses(listed + [copy])
+
+    def test_leaves_out_a_model_priced_in_another_unit(self):
+        listed = self.listed()
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"].append({"direction": "input", "priceUsd": 0.004, "unit": "/Min", "label": "Input"})
+        self.assertNotIn("mistral-large-4", self.scrape(listed))
+
+    def test_leaves_out_a_retired_model(self):
+        self.assertNotIn("mistral-large-4", self.scrape(self.change(self.listed(), "mistral-large-4-0", status="Retired")))
 
     def test_keeps_a_deprecated_model_as_last_read_and_adds_no_new_one(self):
         before = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
-        self.assertIn("mistral-large-2512", before)
-        refresh.MISTRAL_MIN_PRICED = 2
-        deprecated = self.card("mistral-large-3-25-12")
-        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated})
-        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
-        offers = {o["model_id"]: o for o in self.provider("mistral")["offerings"]}
-        self.assertEqual(offers["mistral-large-2512"], before["mistral-large-2512"])
+        self.assertIn("mistral-large-4", before)
+        listed = self.change(self.listed(), "mistral-large-4-0", status="Deprecated")
+        for m in self.copies(listed, "mistral-large-4-0"):
+            m["pricing"][0]["priceUsd"] = 70
+        self.change(listed, "codestral-25-08", status="Deprecated", modelIds=["codestral-2599"])
+        offers = self.scrape(listed)
+        self.assertEqual(offers["mistral-large-4"], before["mistral-large-4"])
+        self.assertNotIn("codestral-2599", offers)
+        self.assertFalse((self.root / "models" / "codestral-2599.yaml").exists())
 
-    def test_adds_no_deprecated_model_the_catalog_never_had(self):
-        refresh.MISTRAL_MIN_PRICED = 2
-        deprecated = self.card("mistral-large-3-25-12").replace("mistral-large-2512", "mistral-large-2599")
-        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated})
-        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
-        offers = {o["model_id"] for o in self.provider("mistral")["offerings"]}
-        self.assertNotIn("mistral-large-2599", offers)
-        self.assertFalse((self.root / "models" / "mistral-large-2599.yaml").exists())
+    def test_two_deprecated_models_may_name_the_same_model(self):
+        listed = self.change(self.listed(), "mistral-large-4-0", status="Deprecated")
+        self.change(listed, "codestral-25-08", status="Deprecated", modelIds=["mistral-large-4"])
+        self.assertIn("mistral-large-4", self.scrape(listed))
 
-    def test_a_retired_sign_wins_over_a_deprecated_badge(self):
-        page = self.card("mistral-large-3-25-12")
-        page += '<script>self.__next_f.push([1,"{\\"isRetired\\":true}"])</script>'
-        self.assertIsNone(refresh.mistral_card(page, "mistral-large-3-25-12"))
+    def test_refuses_two_priced_models_naming_the_same_model(self):
+        self.refuses(self.change(self.listed(), "codestral-25-08", modelIds=["mistral-large-4"]))
 
     def test_refuses_a_list_read_mostly_as_deprecated(self):
-        # A badge read on every card would otherwise write the last prices
-        # back as a success.
-        refresh.MISTRAL_MIN_PRICED = 1
-        deprecated = self.card("mistral-large-3-25-12")
-        page = self.card("mistral-large-4-0")
-        page += '<script>self.__next_f.push([1,"{\\"data-badge-type\\":\\"deprecated\\"}"])</script>'
-        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated, "mistral-large-4-0": page,
-                                     "mistral-embed-23-12": deprecated})
-        with self.assertRaises(refresh.ParseError):
-            refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
-
-    def test_two_deprecated_cards_may_name_the_same_model(self):
-        # Voxtral Mini's deprecated cards share their API names.
-        refresh.MISTRAL_MIN_PRICED = 1
-        deprecated = self.card("mistral-large-3-25-12")
-        pages, index = self.pages(**{"mistral-medium-3-5-26-04": deprecated, "devstral-2-25-12": deprecated})
-        refresh.scrape_mistral("2026-11-01", pages=pages, index=index)
-        self.assertIn("mistral-large-2512", {o["model_id"] for o in self.provider("mistral")["offerings"]})
+        # A status read wrong on every model would otherwise write the last
+        # prices back as a success.
+        listed = self.listed()
+        for m in self.models(listed):
+            if m["status"] != "Retired":
+                m["status"] = "Deprecated"
+        self.refuses(listed)
 
     def test_refuses_a_shrunken_list(self):
-        refresh.MISTRAL_MIN_PRICED = 10
-        pages, index = self.pages()
+        listed = self.listed()
+        for m in listed:
+            m.update(replacedBy=None, relatedModels=[])
+        # The priced models first: only the list's length is short.
+        priced = [m for m in listed if refresh.mistral_model(m) and "prices" in refresh.mistral_model(m)]
+        slugs = sorted({m["slug"] for m in priced})[:refresh.MISTRAL_MIN_LISTED - 1]
+        self.assertGreaterEqual(len(slugs), refresh.MISTRAL_MIN_PRICED)
+        self.refuses([m for m in listed if m["slug"] in slugs])
+
+    def test_refuses_a_page_without_models(self):
         with self.assertRaises(refresh.ParseError):
-            refresh.scrape_mistral("2026-10-29", pages=pages, index=index)
+            refresh.scrape_mistral("2026-11-25", page="<html>" + "x" * 2000 + "</html>")
