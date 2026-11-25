@@ -565,8 +565,8 @@ offerings:
 - model: glm-5.2
   model_id: z-ai/glm-5.2
   prices:
-    input: 1.12
-    cached_input: 0.15
+    input: 0.966
+    cached_input: 0.143
     output: 4.4
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.2/endpoints
@@ -591,7 +591,7 @@ offerings:
   prices:
     input: 1.085
     cached_input: 0.1735
-    output: 4.29215
+    output: 4.08
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
     date: '2026-11-25'
@@ -613,9 +613,9 @@ offerings:
 - model: glm-5.3-flash
   model_id: z-ai/glm-5.3-flash
   prices:
-    input: 0.128
+    input: 0.12
     cached_input: 0.03
-    output: 0.5
+    output: 0.45
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints
     date: '2026-11-25'
