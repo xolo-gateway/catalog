@@ -35,10 +35,10 @@ offerings:
   prices:
     input: 0.195
     cached_input: 0.007
-    output: 0.78
+    output: 0.75
     status: estimated
     source: https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints
-    date: '2026-11-25'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -50,10 +50,10 @@ offerings:
     source: https://openrouter.ai/api/v1/models
     date: '2026-10-29'
   output_window:
-    value: 393216
+    value: 943718
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-11-13'
+    date: '2026-11-28'
 - model: gemini-4-argon
   model_id: google/gemini-4-argon
   prices:
@@ -154,12 +154,12 @@ offerings:
 - model: minimax-m3
   model_id: minimax/minimax-m3
   prices:
-    input: 0.3
-    cached_input: 0.06
-    output: 1.2
+    input: 0.29
+    cached_input: 0.058
+    output: 1.15
     status: estimated
     source: https://openrouter.ai/api/v1/models/minimax/minimax-m3/endpoints
-    date: '2026-11-22'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -397,12 +397,12 @@ offerings:
 - model: hy3
   model_id: tencent/hy3
   prices:
-    input: 0.0825
-    cached_input: 0.020625
-    output: 0.33
+    input: 0.132
+    cached_input: 0.033
+    output: 0.528
     status: estimated
     source: https://openrouter.ai/api/v1/models/tencent/hy3/endpoints
-    date: '2026-11-25'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -565,12 +565,12 @@ offerings:
 - model: glm-5.2
   model_id: z-ai/glm-5.2
   prices:
-    input: 0.966
-    cached_input: 0.143
-    output: 4.4
+    input: 0.903
+    cached_input: 0.1415
+    output: 3.96
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.2/endpoints
-    date: '2026-11-25'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -591,10 +591,10 @@ offerings:
   prices:
     input: 1.085
     cached_input: 0.1735
-    output: 4.08
+    output: 3.98
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints
-    date: '2026-11-25'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -613,12 +613,12 @@ offerings:
 - model: glm-5.3-flash
   model_id: z-ai/glm-5.3-flash
   prices:
-    input: 0.12
+    input: 0.122
     cached_input: 0.03
-    output: 0.45
+    output: 0.4
     status: estimated
     source: https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints
-    date: '2026-11-25'
+    date: '2026-11-28'
     note: 'Median of the prices of the providers OpenRouter serves this model through at the standard
       tier (every tier when it has none), a provider with a current incident included; a cache price only
       when at least half of them state one. A request is billed at the price of the provider it reaches,
@@ -630,7 +630,7 @@ offerings:
     source: https://openrouter.ai/api/v1/models
     date: '2026-10-29'
   output_window:
-    value: 943718
+    value: 943717
     status: published
     source: https://openrouter.ai/api/v1/models
-    date: '2026-11-25'
+    date: '2026-11-28'
